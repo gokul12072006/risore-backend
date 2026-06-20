@@ -1,0 +1,17 @@
+# Environments
+venv/
+env/
+.env
+
+# Database Memory
+chroma_db/
+knowledge_base/
+
+# Python caches
+__pycache__/
+*.pyc
+*.pyo
+
+# Gradio / Logs
+flagged/
+*.log
