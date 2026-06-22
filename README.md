@@ -36,4 +36,4 @@ To teach Risore new skills or provide it with private data:
 2. The data is permanently embedded into the local ChromaDB vector database. Risore will automatically use this knowledge in future conversations.
 
 ---
-*Architected by Antigravity.*
+
