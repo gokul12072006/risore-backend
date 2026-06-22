@@ -11,3 +11,9 @@ python-docx
 markdown
 gradio
 pydantic
+typer
+rich
+g4f
+python-dotenv
+langchain-groq
+ddgs

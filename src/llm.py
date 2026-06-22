@@ -40,12 +40,14 @@ class UltimateFreeCloudLLM(LLM):
 def get_llm():
     """
     Hybrid LLM Router:
-    1. If a GROQ_API_KEY is found in the .env file, it uses the lightning-fast Groq API.
-    2. If no key is found, it automatically falls back to the keyless Free Cloud Cluster.
+    1. If a GROQ_API_KEY is found, it uses the lightning-fast Groq API.
+    2. If Ollama is running locally, it uses Qwen 3B (100% private, local-first).
+    3. If neither is available, it falls back to the keyless Free Cloud Cluster.
     """
+    from src.config import LLM_MODEL
     api_key = os.getenv("GROQ_API_KEY")
     
-    # Check if the user has provided a valid Groq key
+    # 1. Cloud: Groq API
     if api_key and api_key != "your_free_groq_api_key_here":
         try:
             from langchain_groq import ChatGroq
@@ -55,8 +57,18 @@ def get_llm():
                 api_key=api_key
             )
         except Exception:
-            # If Groq fails for some reason, fall back to the free cluster
-            return UltimateFreeCloudLLM()
-    else:
-        # No API key found, use the keyless free cluster (10-15s delay)
-        return UltimateFreeCloudLLM()
+            pass
+            
+    # 2. Local: Ollama (Qwen 3B)
+    try:
+        from langchain_community.llms import Ollama
+        import requests
+        # Quick check if Ollama is alive
+        res = requests.get("http://localhost:11434/", timeout=1)
+        if res.status_code == 200:
+            return Ollama(model=LLM_MODEL)
+    except Exception:
+        pass
+        
+    # 3. Cloud Fallback: Free Cluster
+    return UltimateFreeCloudLLM()

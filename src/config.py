@@ -1,8 +1,8 @@
 import os
 
 # Google Drive Integration / Storage Path
-# For Google Colab: os.environ["NOVA_STORAGE_PATH"] = "/content/drive/MyDrive/Nova_DB"
-BASE_DIR = os.getenv("NOVA_STORAGE_PATH", os.path.join(os.getcwd(), "nova_storage"))
+# For Google Colab: os.environ["NOVA_STORAGE_PATH"] = "/content/drive/MyDrive/Risore_DB"
+BASE_DIR = os.getenv("NOVA_STORAGE_PATH", os.path.join(os.getcwd(), "risore_storage"))
 
 DATA_DIR = os.path.join(BASE_DIR, "data")
 CHROMA_DB_DIR = os.path.join(BASE_DIR, "chroma_db")

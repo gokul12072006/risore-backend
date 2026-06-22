@@ -15,3 +15,6 @@ __pycache__/
 # Gradio / Logs
 flagged/
 *.log
+
+# Memory
+risore_storage/

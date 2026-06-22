@@ -10,7 +10,7 @@ from src.vector_store import create_or_update_chroma
 KNOWLEDGE_DIR = "knowledge_base"
 
 def ingest_knowledge():
-    print(f"Starting to teach Nova from {KNOWLEDGE_DIR}...")
+    print(f"Starting to teach Risore from {KNOWLEDGE_DIR}...")
     
     if not os.path.exists(KNOWLEDGE_DIR):
         print("Knowledge base directory not found.")
@@ -30,9 +30,9 @@ def ingest_knowledge():
                 print(f"  -> Failed to absorb {filename}: {e}")
                 
     if all_chunks:
-        print(f"Saving {len(all_chunks)} total knowledge chunks to Nova's brain (ChromaDB)...")
+        print(f"Saving {len(all_chunks)} total knowledge chunks to Risore's brain (ChromaDB)...")
         create_or_update_chroma(all_chunks)
-        print("Knowledge successfully integrated! Nova 1.0 is now smarter.")
+        print("Knowledge successfully integrated! Risore 1.0 is now smarter.")
     else:
         print("No new knowledge found to integrate.")
 
