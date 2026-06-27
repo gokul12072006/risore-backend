@@ -277,7 +277,7 @@ async def chat_with_file_endpoint(
     is_deep_research: bool = Form(False),
     session_id: Optional[str] = Form(None),
     ai_mode: str = Form("Default"),
-    file: UploadFile = File(...),
+    files: List[UploadFile] = File(...),
     user_token: dict = Depends(get_current_user),
     x_device_id: Optional[str] = Header(None),
     db: Session = Depends(get_db),
@@ -301,133 +301,81 @@ async def chat_with_file_endpoint(
                 task_list = "\n".join([f"- {t.task_content}" for t in tasks])
                 user_context += f"The user's current pending tasks are:\n{task_list}\n"
 
-        file_ext = file.filename.split(".")[-1].lower()
         extracted_text = ""
+        image_contents = []
 
-        if file_ext == "pdf":
-            import pdfplumber
+        for file in files:
+            file_ext = file.filename.split(".")[-1].lower()
+            
+            if file_ext == "pdf":
+                import pdfplumber
+                with pdfplumber.open(file.file) as pdf:
+                    extracted_text += "\n" + "\n".join([page.extract_text() for page in pdf.pages if page.extract_text()])
+                    
+            elif file_ext in ["doc", "docx"]:
+                from docx import Document
+                doc = Document(file.file)
+                extracted_text += "\n" + "\n".join([para.text for para in doc.paragraphs])
+                
+            elif file_ext == "txt":
+                extracted_text += "\n" + (await file.read()).decode("utf-8")
+                
+            elif file_ext in ["jpg", "jpeg", "png", "webp"]:
+                image_data = await file.read()
+                base64_image = base64.b64encode(image_data).decode("utf-8")
+                image_contents.append({
+                    "type": "image_url",
+                    "image_url": {"url": f"data:image/{file_ext};base64,{base64_image}"}
+                })
 
-            with pdfplumber.open(file.file) as pdf:
-                extracted_text = "\n".join(
-                    [page.extract_text() for page in pdf.pages if page.extract_text()]
-                )
-
-        elif file_ext in ["doc", "docx"]:
-            from docx import Document
-
-            doc = Document(file.file)
-            extracted_text = "\n".join([para.text for para in doc.paragraphs])
-
-        elif file_ext == "txt":
-            extracted_text = (await file.read()).decode("utf-8")
-
-        elif file_ext in ["jpg", "jpeg", "png", "webp"]:
-            # Image processing via Groq Vision API
+        if image_contents:
             api_key = os.getenv("GROQ_API_KEY")
             if api_key and api_key != "your_free_groq_api_key_here":
                 from groq import Groq
-
                 client = Groq(api_key=api_key)
-
-                # Read image and convert to base64
-                image_data = await file.read()
-                base64_image = base64.b64encode(image_data).decode("utf-8")
-
                 try:
-                    # Check if the user wants to generate/modify an image
                     user_prompt_lower = message.lower()
-                    wants_generation = any(
-                        word in user_prompt_lower
-                        for word in [
-                            "make",
-                            "generate",
-                            "create",
-                            "turn",
-                            "convert",
-                            "change",
-                        ]
-                    ) and any(
-                        word in user_prompt_lower
-                        for word in [
-                            "image",
-                            "picture",
-                            "anime",
-                            "style",
-                            "look",
-                            "drawing",
-                        ]
-                    )
-
+                    wants_generation = any(w in user_prompt_lower for w in ["make", "generate", "create", "turn", "convert", "change"]) and any(w in user_prompt_lower for w in ["image", "picture", "anime", "style", "look", "drawing"])
+                    
                     if wants_generation:
-                        system_prompt = "Describe exactly what is in this image in extreme detail (subjects, composition, lighting, poses, colors). If the image contains a cartoon, drawing, or video game character, describe them as if they were a real, living human being in a real photograph. DO NOT mention that it is a game, drawing, or 3D render. Just describe the visual contents as a real scene so it can be recreated perfectly."
+                        system_prompt = "Describe exactly what is in these images in extreme detail (subjects, composition, lighting, poses, colors). If the images contain a cartoon, drawing, or video game character, describe them as if they were a real, living human being in a real photograph. DO NOT mention that it is a game, drawing, or 3D render. Just describe the visual contents as a real scene so it can be recreated perfectly."
                     else:
-                        system_prompt = (
-                            f"Context message: {message}. Please answer in {language}."
-                        )
+                        system_prompt = f"Context message: {message}. Please answer in {language}."
+
+                    content = [{"type": "text", "text": system_prompt}] + image_contents
 
                     vision_response = client.chat.completions.create(
                         model="meta-llama/llama-4-scout-17b-16e-instruct",
-                        messages=[
-                            {
-                                "role": "user",
-                                "content": [
-                                    {"type": "text", "text": system_prompt},
-                                    {
-                                        "type": "image_url",
-                                        "image_url": {
-                                            "url": f"data:image/{file_ext};base64,{base64_image}",
-                                        },
-                                    },
-                                ],
-                            }
-                        ],
+                        messages=[{"role": "user", "content": content}],
                     )
 
                     vision_text = vision_response.choices[0].message.content
 
                     if wants_generation:
-                        # Extract resolution keywords from user message
                         width = 1024
                         height = 1024
                         msg_lower = message.lower()
-                        if (
-                            "4k" in msg_lower
-                            or "uhd" in msg_lower
-                            or "landscape" in msg_lower
-                        ):
+                        if "4k" in msg_lower or "uhd" in msg_lower or "landscape" in msg_lower:
                             width, height = 3840, 2160
                         elif "1080p" in msg_lower or "16:9" in msg_lower:
                             width, height = 1920, 1080
-                        elif (
-                            "portrait" in msg_lower
-                            or "vertical" in msg_lower
-                            or "9:16" in msg_lower
-                        ):
+                        elif "portrait" in msg_lower or "vertical" in msg_lower or "9:16" in msg_lower:
                             width, height = 2160, 3840
 
-                        # Pseudo image-to-image: Combine description with user request
                         combined_prompt = f"{vision_text}. Applied style: {message}. Photorealistic, 8k resolution, cinematic lighting, shot on DSLR, highly detailed masterpiece."
-                        combined_prompt = combined_prompt[:800]  # Safe URL length limit
+                        combined_prompt = combined_prompt[:800]
                         encoded_prompt = urllib.parse.quote(combined_prompt)
                         image_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?model=flux-realism&width={width}&height={height}&nologo=true&enhance=true"
-                        return {
-                            "response": f"I have transformed your image based on your request!\n\n![Generated Image]({image_url})\n*Style applied: {message}*"
-                        }
+                        return {"response": f"I have transformed your image based on your request!\n\n![Generated Image]({image_url})\n*Style applied: {message}*"}
                     else:
                         return {"response": vision_text}
-
                 except Exception as ve:
-                    return {
-                        "response": f"I tried to analyze the image using Groq Vision, but encountered an error: {str(ve)}"
-                    }
+                    return {"response": f"I tried to analyze the images using Groq Vision, but encountered an error: {str(ve)}"}
             else:
-                return {
-                    "response": "To process images, please add a valid `GROQ_API_KEY` to your `.env` file so I can use the Llama-3 Vision model."
-                }
-        else:
-            return {
-                "response": f"I cannot read .{file_ext} files yet. Please upload a PDF, Word document, TXT, or Image."
-            }
+                return {"response": "To process images, please add a valid `GROQ_API_KEY` to your `.env` file so I can use the Llama-3 Vision model."}
+        
+        elif not extracted_text:
+            return {"response": "I cannot read the provided files. Please upload a PDF, Word document, TXT, or Image."}
 
         # If it's a document (text extracted), pass it to the RAG pipeline
         if extracted_text:
