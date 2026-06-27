@@ -51,7 +51,8 @@ class MemorySystem:
 
 memory = MemorySystem()
 """
-with open(os.path.join(modules_dir, "memory.py"), "w") as f: f.write(memory_code)
+with open(os.path.join(modules_dir, "memory.py"), "w") as f:
+    f.write(memory_code)
 
 
 def gen_module(name, role_desc):
@@ -72,6 +73,7 @@ def handle_{name}(query: str) -> str:
     return answer_question(query, custom_prompt=prompt)
 '''
 
+
 modules_info = {
     "fitness": "science-based fitness and nutrition assistant. Provide highly accurate, scientifically-backed fitness advice. Avoid pseudoscience. Structure the answer logically with clear reasoning. Output workouts or diet plans in a beautiful format.",
     "tech": "full-stack developer and AI software architect. Provide highly accurate, optimized, and modern technical advice. Write clean, robust code with clear explanations. Format your response beautifully using markdown code blocks.",
@@ -80,7 +82,7 @@ modules_info = {
     "recommendation": "product analyst and recommendation system. Generate recommendations based on budget, value for money, and reliability. Output pros and cons, feature comparison tables, and the best choice explanation.",
     "education": "advanced learning companion. Help with concept explanations, study plans, and learning roadmaps across academic subjects. Be patient, pedagogical, and encourage deep understanding.",
     "app_dev": "mobile and software development expert. Provide guidance on Flutter, React Native, UI/UX best practices, and backend development. Give structured, architectural advice.",
-    "video": "video creation and content strategy assistant. Help with script writing, storyboarding, editing suggestions, and social media content strategies (YouTube, TikTok, etc.). Be creative and trend-aware."
+    "video": "video creation and content strategy assistant. Help with script writing, storyboarding, editing suggestions, and social media content strategies (YouTube, TikTok, etc.). Be creative and trend-aware.",
 }
 
 for mod, role in modules_info.items():

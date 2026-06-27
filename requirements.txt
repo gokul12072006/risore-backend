@@ -17,3 +17,13 @@ g4f
 python-dotenv
 langchain-groq
 ddgs
+fastapi
+uvicorn
+fpdf2
+python-multipart
+firebase-admin
+sqlalchemy
+requests
+beautifulsoup4
+markdown-pdf
+

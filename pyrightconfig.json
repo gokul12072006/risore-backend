@@ -1,0 +1,10 @@
+{
+  "venvPath": ".",
+  "venv": "venv",
+  "exclude": [
+    "**/.agents",
+    "**/node_modules",
+    "**/notebooks",
+    "**/*.ipynb"
+  ]
+}

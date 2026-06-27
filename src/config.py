@@ -21,4 +21,18 @@ LLM_MODEL = os.getenv("NOVA_LLM_MODEL", "qwen2.5:3b")
 EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
 
 # Supported Languages
-SUPPORTED_LANGUAGES = ["English", "Tamil"]
+SUPPORTED_LANGUAGES = [
+    "English",
+    "Tamil",
+    "Spanish",
+    "French",
+    "German",
+    "Chinese",
+    "Japanese",
+    "Russian",
+    "Arabic",
+    "Hindi",
+    "Portuguese",
+    "Korean",
+    "Italian",
+]

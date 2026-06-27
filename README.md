@@ -22,13 +22,14 @@ I have created a 1-click automated setup!
 Run the main file to enter an interactive session:
 `.\risore.bat chat`
 
-*Other specific modules:*
+**Using the Cinematic Web Platform**
+1. Start the secure backend API server:
+`venv\Scripts\python.exe server.py`
+2. Open `web/index.html` in your favorite web browser!
+
+*Other specific CLI modules:*
 - `.\risore.bat tech "Write a Python script to scrape a website"`
 - `.\risore.bat fitness "Create a 3-day home workout plan"`
-- `.\risore.bat study "Explain the theory of relativity simply"`
-
-**Using the Web Dashboard**
-`venv\Scripts\python.exe app.py`
 
 ## 🧠 Teaching Risore
 To teach Risore new skills or provide it with private data:

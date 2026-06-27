@@ -1,38 +1,43 @@
-import gradio as gr
 import os
 import shutil
+
+import gradio as gr
+
 from src.config import DATA_DIR, LLM_MODEL, SUPPORTED_LANGUAGES
-from src.document_processor import load_document, chunk_documents
-from src.vector_store import create_or_update_chroma
+from src.document_processor import chunk_documents, load_document
 from src.rag_pipeline import answer_question
+from src.vector_store import create_or_update_chroma
+
 
 def process_uploaded_file(file):
     if file is None:
         return "No file uploaded."
-    
+
     try:
         # Save file to the integrated Storage directory (e.g., Google Drive if mapped)
         file_name = os.path.basename(file.name)
         file_path = os.path.join(DATA_DIR, file_name)
         shutil.copy(file.name, file_path)
-        
+
         # Extract, chunk, and embed
         docs = load_document(file_path)
         chunks = chunk_documents(docs)
         create_or_update_chroma(chunks)
-        
+
         return f"Successfully processed '{file_name}' and added it to Risore's knowledge base."
     except Exception as e:
         return f"Error processing file: {str(e)}"
+
 
 def chat(message, history, language):
     """Chatbot function integrating user message and history."""
     history_str = ""
     for u, b in history[-4:]:
         history_str += f"User: {u}\nRisore: {b}\n"
-        
+
     response = answer_question(message, language, history=history_str)
     return response
+
 
 # Custom CSS for a beautiful local UI
 custom_css = """
@@ -44,28 +49,36 @@ custom_css = """
 
 with gr.Blocks(title="Risore 1.0 - Open Source AI") as app:
     gr.Markdown("# 🚀 Risore 1.0 - Open Source Local AI Assistant")
-    gr.Markdown(f"**Current Model:** `{LLM_MODEL}` | **Storage Base:** `{DATA_DIR}` (Map this to Google Drive for Cloud Storage)")
-    
+    gr.Markdown(
+        f"**Current Model:** `{LLM_MODEL}` | **Storage Base:** `{DATA_DIR}` (Map this to Google Drive for Cloud Storage)"
+    )
+
     with gr.Row():
         with gr.Column(scale=1):
             gr.Markdown("### 🧠 Teach Risore (Knowledge Base)")
-            gr.Markdown("Upload files to integrate them into Risore's memory. Supported: `.pdf`, `.docx`, `.txt`, `.md`.")
-            
+            gr.Markdown(
+                "Upload files to integrate them into Risore's memory. Supported: `.pdf`, `.docx`, `.txt`, `.md`."
+            )
+
             file_input = gr.File(label="Upload Document")
             upload_btn = gr.Button("Teach AI", variant="primary")
             status_output = gr.Textbox(label="Status", interactive=False)
-            
-            upload_btn.click(process_uploaded_file, inputs=file_input, outputs=status_output)
-            
+
+            upload_btn.click(
+                process_uploaded_file, inputs=file_input, outputs=status_output
+            )
+
             gr.Markdown("### ⚙️ Settings")
-            lang_radio = gr.Radio(choices=SUPPORTED_LANGUAGES, value="English", label="Response Language")
-            
+            lang_radio = gr.Radio(
+                choices=SUPPORTED_LANGUAGES, value="English", label="Response Language"
+            )
+
         with gr.Column(scale=2):
             chatbot_interface = gr.ChatInterface(
                 fn=chat,
                 additional_inputs=[lang_radio],
                 title="Chat with Risore 1.0",
-                description="Ask questions about the uploaded documents."
+                description="Ask questions about the uploaded documents.",
             )
 
 if __name__ == "__main__":
