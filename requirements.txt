@@ -15,7 +15,7 @@ rich
 g4f
 python-dotenv
 langchain-groq
-ddgs
+wikipedia
 fastapi
 uvicorn
 fpdf2

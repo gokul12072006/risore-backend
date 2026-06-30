@@ -2,8 +2,8 @@ import re
 import os
 import requests
 import concurrent.futures
-
-from ddgs import DDGS
+import wikipedia
+from src.news_fetcher import get_trending_news
 
 
 def extract_urls(query: str) -> list:
@@ -24,13 +24,6 @@ def fetch_url_content(url: str) -> str:
         return response.text[:15000]
     except Exception as e:
         return f"[Failed to fetch content from {url}: {str(e)}]"
-
-
-def needs_realtime(query: str) -> bool:
-    """Use an ultra-fast keyword heuristic to decide if it needs to search the web."""
-    keywords = ["weather", "today", "now", "current", "news", "latest", "time", "date", "event", "update", "upcoming", "who", "what", "where", "when", "how", "price", "stock", "wiki", "sale", "steam"]
-    query_lower = query.lower()
-    return any(word in query_lower for word in keywords)
 
 
 def fetch_weather_api(query: str) -> str:
@@ -58,38 +51,57 @@ def fetch_weather_api(query: str) -> str:
             if res.status_code == 200:
                 weather_str = res.text.strip()
                 return f"[SYSTEM ALERT - LIVE WEATHER DATA PROVIDED: {weather_str}]"
-    except Exception as e:
+    except Exception:
         pass
     return ""
 
 
-def get_duckduckgo_search(query: str) -> str:
-    """Runs a DDG search but forcibly aborts after 3 seconds to prevent 50-second delays."""
-    def _search():
-        try:
-            results = DDGS().text(query, max_results=3)
-            if results:
-                return " ".join([r.get("body", "") for r in results])
-        except Exception:
-            pass
+def fetch_wikipedia_api(query: str) -> str:
+    """Uses Groq 8B model to extract the main subject and fetch from Wikipedia."""
+    api_key = os.getenv("GROQ_API_KEY")
+    if not api_key or api_key == "your_free_groq_api_key_here":
         return ""
         
-    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
-        future = executor.submit(_search)
-        try:
-            # 3-second hard timeout fixes the 50-second delay bug!
-            result = future.result(timeout=3)
-            if result:
-                return f"[Real-Time Web Search Results:\n{result}\n]"
-        except concurrent.futures.TimeoutError:
-            print("DuckDuckGo search timed out after 3 seconds. Skipping to prevent delay.")
-        except Exception as e:
-            pass
+    try:
+        from groq import Groq
+        client = Groq(api_key=api_key)
+        
+        prompt = f"Extract the main subject or entity from this question to search on Wikipedia. Output ONLY the subject name, nothing else. If it's a conversational greeting, output NONE. Query: '{query}'"
+        completion = client.chat.completions.create(
+            model="llama-3.1-8b-instant",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0,
+            max_tokens=15
+        )
+        subject = completion.choices[0].message.content.strip()
+        
+        if subject.upper() != "NONE" and subject != "":
+            def _wiki_search():
+                try:
+                    summary = wikipedia.summary(subject, sentences=4, auto_suggest=True)
+                    return f"[SYSTEM ALERT - WIKIPEDIA FACT EXTRACTED for '{subject}':\n{summary}\n]"
+                except wikipedia.exceptions.DisambiguationError as e:
+                    return f"[SYSTEM ALERT - WIKIPEDIA: Multiple meanings found for '{subject}'. It could refer to {e.options[:3]}]"
+                except wikipedia.exceptions.PageError:
+                    return ""
+                except Exception:
+                    return ""
+                    
+            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+                future = executor.submit(_wiki_search)
+                try:
+                    result = future.result(timeout=4)
+                    if result:
+                        return result
+                except concurrent.futures.TimeoutError:
+                    return ""
+    except Exception:
+        pass
     return ""
 
 
 def get_realtime_context(query: str) -> str:
-    """Fetches real-time information from dedicated APIs or web fallback."""
+    """Fetches real-time information from dedicated APIs (Weather, News, Wikipedia)."""
     context_chunks = []
 
     # 1. URLs
@@ -98,20 +110,29 @@ def get_realtime_context(query: str) -> str:
         for url in urls:
             url_text = fetch_url_content(url)
             context_chunks.append(f"[Webpage Content from {url}:\n{url_text}\n]")
+        return "\n\n" + "\n\n".join(context_chunks) + "\n"
 
     # 2. DEDICATED API ROUTER (Weather)
     if "weather" in query.lower() or "temperature" in query.lower():
         weather_context = fetch_weather_api(query)
         if weather_context:
             context_chunks.append(weather_context)
-            # If weather is found, skip the slow DDG fallback to save time!
             return "\n\n" + "\n\n".join(context_chunks) + "\n"
 
-    # 3. FALLBACK WEB SEARCH
-    if needs_realtime(query) and not urls:
-        search_ctx = get_duckduckgo_search(query)
-        if search_ctx:
-            context_chunks.append(search_ctx)
+    # 3. DEDICATED API ROUTER (News)
+    if "news" in query.lower() or "latest update" in query.lower() or "trending" in query.lower():
+        news_items = get_trending_news(5)
+        if news_items:
+            news_str = "\n".join([f"- {item['title']}" for item in news_items])
+            context_chunks.append(f"[SYSTEM ALERT - LIVE BREAKING NEWS HEADLINES:\n{news_str}\n]")
+            return "\n\n" + "\n\n".join(context_chunks) + "\n"
+            
+    # 4. FALLBACK TO WIKIPEDIA (For General Knowledge)
+    keywords = ["who", "what", "where", "when", "why", "how", "history", "biography", "wiki", "explain", "details", "president", "country", "capital"]
+    if any(word in query.lower() for word in keywords) and len(query.split()) >= 2:
+        wiki_ctx = fetch_wikipedia_api(query)
+        if wiki_ctx:
+            context_chunks.append(wiki_ctx)
 
     if context_chunks:
         return "\n\n" + "\n\n".join(context_chunks) + "\n"
