@@ -164,6 +164,34 @@ def get_rag_chain(
     return rag_chain
 
 
+class ApologyViolationError(Exception):
+    pass
+
+
+def get_corrector_chain(language="English"):
+    """Creates a secondary RAG chain to correct errors from the primary chain."""
+    llm = get_llm()
+    
+    system_prompt = f"""You are a strict, senior AI Auto-Corrector for Risore 1.0. 
+    The primary AI generated a response that either crashed the system OR broke character by apologizing for lacking real-time data.
+    Your job is to read the original question, the error that occurred, and the bad response (if any), and GENERATE A FLAWLESS REPLACEMENT RESPONSE.
+    
+    RULES:
+    1. DO NOT apologize or mention that you are an AI.
+    2. NEVER use the words "As an AI", "I don't have access", or "My knowledge cutoff".
+    3. Confidently answer the user's question, pivot to a general guide, or use a <GENERATE_INFOGRAPHIC> tag if you lack data.
+    4. Respond in {language}."""
+    
+    from langchain_core.prompts import ChatPromptTemplate
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", system_prompt),
+        ("user", "Original Question: {input}\n\nError/Violation Detected: {error_details}\n\nBad AI Response (if any): {bad_response}\n\nPlease generate the corrected, perfect response now.")
+    ])
+    
+    from langchain_core.output_parsers import StrOutputParser
+    return prompt | llm | StrOutputParser()
+
+
 def answer_question(
     question,
     language="English",
@@ -172,44 +200,50 @@ def answer_question(
     is_private=False,
     is_deep_research=False,
 ):
-    """Generates an answer using the RAG pipeline."""
-    try:
-        chain = get_rag_chain(language, custom_prompt, is_private, is_deep_research)
-        response = chain.invoke({"input": question, "history": history})
-        
-        # --- ANTI-FRUSTRATION FAIL-SAFE FILTER ---
-        # Large language models (like Llama 3) sometimes strongly resist system prompts regarding real-time limitations.
-        # This regex filter forcibly scrubs any generic AI apologies from the final output to ensure the persona never breaks.
-        import re
-        bad_patterns = [
-            r"Unfortunately, I don't have real-time access[^.\n]*[.\n]",
-            r"Unfortunately, I do not have real-time access[^.\n]*[.\n]",
-            r"Unfortunately, I don't have the most up-to-date information[^.\n]*[.\n]",
-            r"Unfortunately, I do not have the most up-to-date information[^.\n]*[.\n]",
-            r"Although I don't have the most up-to-date information[^,]*,\s*",
-            r"While I don't have the most up-to-date information[^,]*,\s*",
-            r"Although I don't have real-time access[^,]*,\s*",
-            r"While I don't have real-time access[^,]*,\s*",
-            r"As an AI language model[^.\n]*[.\n]",
-            r"As an AI assistant[^.\n]*[.\n]",
-            r"I don't have access to real-time[^.\n]*[.\n]",
-            r"I do not have access to real-time[^.\n]*[.\n]",
-            r"My knowledge cutoff[^.\n]*[.\n]",
-            r"I am an AI[^.\n]*[.\n]",
-            r"I cannot access real-time[^.\n]*[.\n]",
-            r"I do not have real-time[^.\n]*[.\n]",
-            r"Since I don't have real-time[^.\n]*[.\n]"
-        ]
-        
-        for pattern in bad_patterns:
-            response = re.sub(pattern, "", response, flags=re.IGNORECASE)
+    """Generates an answer using the RAG pipeline with a Self-Healing Reflexion Loop."""
+    import re
+    
+    MAX_RETRIES = 1
+    last_error = None
+    bad_response_text = ""
+    
+    for attempt in range(MAX_RETRIES + 1):
+        try:
+            if attempt == 0:
+                chain = get_rag_chain(language, custom_prompt, is_private, is_deep_research)
+                response = chain.invoke({"input": question, "history": history})
+            else:
+                print(f"Triggering Corrector AI... (Attempt {attempt})")
+                corrector_chain = get_corrector_chain(language)
+                response = corrector_chain.invoke({
+                    "input": question, 
+                    "error_details": str(last_error),
+                    "bad_response": bad_response_text
+                })
             
-        # Clean up dangling transition words left behind by the regex removal
-        response = re.sub(r"However,\s+I\s+can\s+suggest", "Here are", response, flags=re.IGNORECASE)
-        response = re.sub(r"However,\s+I\s+can\s+provide", "Here is", response, flags=re.IGNORECASE)
-        response = re.sub(r"Instead,\s+I\s+can", "Here is", response, flags=re.IGNORECASE)
-        response = re.sub(r"I\s+can\s+provide\s+you\s+with", "Here is", response, flags=re.IGNORECASE)
-        
-        return response.strip()
-    except Exception as e:
-        return f"An internal AI error occurred during generation. Details: {str(e)}"
+            # --- SEMANTIC APOLOGY MONITORING ---
+            bad_patterns = [
+                r"Unfortunately, I don't have real-time access",
+                r"Unfortunately, I do not have real-time access",
+                r"Although I don't have the most up-to-date",
+                r"While I don't have the most up-to-date",
+                r"As an AI language model",
+                r"As an AI assistant",
+                r"I don't have access to real-time",
+                r"My knowledge cutoff",
+                r"I am an AI",
+                r"Since I don't have real-time"
+            ]
+            
+            for pattern in bad_patterns:
+                if re.search(pattern, response, flags=re.IGNORECASE):
+                    bad_response_text = response
+                    raise ApologyViolationError("The AI broke character and generated a generic AI disclaimer.")
+                    
+            return response.strip()
+            
+        except Exception as e:
+            last_error = e
+            print(f"Pipeline Error Caught: {str(e)}")
+            if attempt == MAX_RETRIES:
+                return f"An internal AI error occurred during generation and auto-correction failed. Details: {str(e)}"
