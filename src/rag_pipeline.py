@@ -65,7 +65,7 @@ def get_rag_chain(
         - For an Image of a Schedule, Plan, or Text-heavy graphic: <GENERATE_INFOGRAPHIC><TITLE>Your Title</TITLE><CONTENT>Markdown formatted schedule/plan</CONTENT></GENERATE_INFOGRAPHIC>
         - For a HTML/CSS/JS Website, UI Component, or Live Code Sandbox: <GENERATE_WEBSITE><TITLE>Title</TITLE><CODE>Complete HTML string including inline CSS and JS</CODE></GENERATE_WEBSITE>
         - For a Resume/CV or Portfolio: <GENERATE_WEBSITE><TITLE>Professional Resume</TITLE><CODE>Generate a highly beautiful, modern, Canva-style HTML/CSS document. Use advanced CSS (flexbox/grid), beautiful color palettes, modern Google Fonts, and a stunning professional layout. CRITICAL: Ensure the resume is in LIGHT MODE (white background, dark text) as it will be printed as a PDF. INCLUDE ALL REAL DATA/TEXT in the HTML.</CODE></GENERATE_WEBSITE>
-        - For a Data Chart (Bar, Pie, Line, Radar): <GENERATE_CHART>{"type": "bar", "data": {"labels": ["A", "B"], "datasets": [{"label": "Dataset 1", "data": [1, 2]}]}}</GENERATE_CHART>
+        - For a Data Chart (Bar, Pie, Line, Radar): <GENERATE_CHART>{{ "type": "bar", "data": {{ "labels": ["A", "B"], "datasets": [{{ "label": "Dataset 1", "data": [1, 2] }}] }} }}</GENERATE_CHART>
         - For a Flowchart, Architecture, or Process Diagram: You MUST use standard ```mermaid Markdown code blocks.
         
         CRITICAL RULE FOR DOCUMENTS (PDF, Word): You MUST write the FULL, COMPLETE, and EXHAUSTIVE text inside the <CONTENT> tags. NEVER use placeholders like "[Insert text here]" or summarize. If you do not provide the full text, the generated file will be blank and the user will be angry.
@@ -104,7 +104,7 @@ def get_rag_chain(
         - For an Image of a Schedule, Plan, or Text-heavy graphic: <GENERATE_INFOGRAPHIC><TITLE>Your Title</TITLE><CONTENT>Markdown formatted schedule/plan</CONTENT></GENERATE_INFOGRAPHIC>
         - For a HTML/CSS/JS Website, UI Component, or Live Code Sandbox: <GENERATE_WEBSITE><TITLE>Title</TITLE><CODE>Complete HTML string including inline CSS and JS</CODE></GENERATE_WEBSITE>
         - For a Resume/CV or Portfolio: <GENERATE_WEBSITE><TITLE>Professional Resume</TITLE><CODE>Generate a highly beautiful, modern, Canva-style HTML/CSS document. Use advanced CSS (flexbox/grid), beautiful color palettes, modern Google Fonts, and a stunning professional layout. CRITICAL: Ensure the resume is in LIGHT MODE (white background, dark text) as it will be printed as a PDF. INCLUDE ALL REAL DATA/TEXT in the HTML.</CODE></GENERATE_WEBSITE>
-        - For a Data Chart (Bar, Pie, Line, Radar): <GENERATE_CHART>{"type": "pie", "data": {"labels": ["A", "B"], "datasets": [{"data": [50, 50]}]}}</GENERATE_CHART>
+        - For a Data Chart (Bar, Pie, Line, Radar): <GENERATE_CHART>{{ "type": "pie", "data": {{ "labels": ["A", "B"], "datasets": [{{ "data": [50, 50] }}] }} }}</GENERATE_CHART>
         - For a Flowchart, Architecture, or Process Diagram: You MUST use standard ```mermaid Markdown code blocks.
         
         CRITICAL RULE FOR DOCUMENTS (PDF, Word): You MUST write the FULL, COMPLETE, and EXHAUSTIVE text inside the <CONTENT> tags. NEVER use placeholders like "[Insert text here]" or summarize. If you do not provide the full text, the generated file will be blank and the user will be angry.
@@ -144,7 +144,7 @@ def get_rag_chain(
             ("user", "Question: Can you tell me the live price of Apple stock?\nContext: [Live Apple stock is 175.20]"),
             ("assistant", "Apple's stock is currently trading at $175.20 based on the latest market data. 📈"),
             ("user", "Question: Can you show me a pie chart of the market share between Apple and Samsung?"),
-            ("assistant", "Here is a breakdown of the global market share between Apple and Samsung. 📊\n\n<GENERATE_CHART>{\"type\": \"pie\", \"data\": {\"labels\": [\"Apple\", \"Samsung\", \"Others\"], \"datasets\": [{\"data\": [28, 24, 48]}]}}</GENERATE_CHART>"),
+            ("assistant", "Here is a breakdown of the global market share between Apple and Samsung. 📊\n\n<GENERATE_CHART>{{ \"type\": \"pie\", \"data\": {{ \"labels\": [\"Apple\", \"Samsung\", \"Others\"], \"datasets\": [{{ \"data\": [28, 24, 48] }}] }} }}</GENERATE_CHART>"),
             ("user", "Previous Conversation History:\n{history}\n\nContext:\n{context}\n\nQuestion:\n{input}\n\nCRITICAL ENFORCEMENT: You must answer the question directly and professionally. Do NOT apologize, do NOT mention being an AI, and DO NOT say you lack real-time access. If you lack live data, pivot smoothly to a historical analysis, general guide, or use <GENERATE_INFOGRAPHIC> without ever stating your limitations.")
         ])
 
@@ -212,4 +212,4 @@ def answer_question(
         
         return response.strip()
     except Exception as e:
-        return f"Error: Ensure Ollama is running and documents are indexed. Details: {str(e)}"
+        return f"An internal AI error occurred during generation. Details: {str(e)}"
