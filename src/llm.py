@@ -61,7 +61,7 @@ def get_llm():
             from langchain_groq import ChatGroq
 
             return ChatGroq(
-                model="llama-3.3-70b-versatile", temperature=0.7, api_key=api_key
+                model="mixtral-8x7b-32768", temperature=0.7, api_key=api_key
             )
         except Exception:
             pass
