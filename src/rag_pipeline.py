@@ -25,7 +25,7 @@ def get_rag_chain(
             query = inputs
 
         import re
-        match = re.search(r"User Message:\s*(.*)", query, re.DOTALL | re.IGNORECASE)
+        match = re.search(r"(?:User Message|User Question):\s*(.*)", query, re.DOTALL | re.IGNORECASE)
         clean_query = match.group(1).strip() if match else query
 
         # 1. Get local knowledge
