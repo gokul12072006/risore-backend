@@ -60,9 +60,9 @@ def get_llm():
         try:
             from langchain_groq import ChatGroq
 
-            # We use DeepSeek R1 to enable native "overthinking" (metacognition)
+            # Reverting to Llama 3.3 for stability since Groq decommissioned the R1 endpoint temporarily
             return ChatGroq(
-                model="deepseek-r1-distill-llama-70b", temperature=0.6, api_key=api_key
+                model="llama-3.3-70b-versatile", temperature=0.6, api_key=api_key
             )
         except Exception:
             pass
