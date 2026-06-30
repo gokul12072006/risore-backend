@@ -17,9 +17,7 @@ from sqlalchemy.orm import Session
 
 from src.config import BASE_DIR
 from src.database import ChatMessage, ChatSession, Task, User, get_db
-from src.file_generator import generate_pdf, generate_word
 from src.news_fetcher import get_trending_news
-from src.rag_pipeline import answer_question
 
 app = FastAPI(
     title="Risore AI API", description="Secure Backend API for Risore AI", version="1.0"
@@ -160,6 +158,9 @@ async def chat_endpoint(
         for msg in req.history[-6:]:
             history_str += f"{msg.role.capitalize()}: {msg.content}\n"
 
+        # Lazy load heavy AI modules to speed up boot time and save RAM
+        from src.rag_pipeline import answer_question
+        
         response = answer_question(
             augmented_message,
             language=req.language or "English",
@@ -182,6 +183,7 @@ async def chat_endpoint(
             filepath = os.path.join("web", "downloads", filename)
             os.makedirs(os.path.join("web", "downloads"), exist_ok=True)
 
+            from src.file_generator import generate_pdf
             if generate_pdf(title, content, filepath):
                 download_link = (
                     f"\n\n**[📥 Download {title} (PDF)](/downloads/{filename})**"
@@ -201,6 +203,7 @@ async def chat_endpoint(
             filepath = os.path.join("web", "downloads", filename)
             os.makedirs(os.path.join("web", "downloads"), exist_ok=True)
 
+            from src.file_generator import generate_word
             if generate_word(title, content, filepath):
                 download_link = (
                     f"\n\n**[📥 Download {title} (Word)](/downloads/{filename})**"
@@ -413,6 +416,9 @@ Please answer in {language}."""
             if user_context:
                 augmented_message += f"[System Context: {user_context}]\n"
             augmented_message += f"Document content: {extracted_text[:20000]}\n\nUser Question: {message}"
+            # Lazy load heavy AI modules
+            from src.rag_pipeline import answer_question
+            
             response = answer_question(
                 augmented_message,
                 language=language,
