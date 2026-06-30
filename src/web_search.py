@@ -2,6 +2,10 @@ import re
 import os
 import requests
 import concurrent.futures
+import time
+import urllib.request
+import urllib.parse
+import xml.etree.ElementTree as ET
 import wikipedia
 from src.news_fetcher import get_trending_news
 
@@ -100,19 +104,48 @@ def fetch_wikipedia_api(query: str) -> str:
     return ""
 
 
-def fetch_jina_search(query: str) -> str:
-    """Uses Jina Search AI as the ultimate autonomous web fallback."""
+_search_cache = {}
+CACHE_DURATION = 3600  # 1 hour
+
+def fetch_google_news_search(query: str) -> str:
+    """Uses Google News RSS Search as the ultimate autonomous web fallback."""
+    global _search_cache
+    
+    current_time = time.time()
+    query_lower = query.lower().strip()
+    
+    # Check cache
+    if query_lower in _search_cache:
+        cached_time, cached_result = _search_cache[query_lower]
+        if current_time - cached_time < CACHE_DURATION:
+            return cached_result
+            
     def _search():
         try:
-            jina_url = f"https://s.jina.ai/{query}"
-            headers = {
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
-                "Accept": "text/plain" # Ask Jina for markdown
-            }
-            response = requests.get(jina_url, headers=headers, timeout=10)
-            if response.status_code == 200:
-                # Return the first 6000 chars to avoid overwhelming context window
-                return f"[SYSTEM ALERT - AUTONOMOUS WEB SCRAPE RESULTS:\n{response.text[:6000]}\n]"
+            url = f"https://news.google.com/rss/search?q={urllib.parse.quote(query)}"
+            req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+            # Strict 3-second timeout
+            with urllib.request.urlopen(req, timeout=3) as response:
+                xml_data = response.read()
+                
+            root = ET.fromstring(xml_data)
+            items = root.findall(".//item")
+            
+            if not items:
+                return ""
+                
+            news_str = ""
+            for item in items[:4]:  # Top 4 results
+                title_elem = item.find("title")
+                title = title_elem.text if title_elem is not None and title_elem.text else ""
+                clean_title = title.rsplit(" - ", 1)[0] if " - " in title else title
+                if clean_title:
+                    news_str += f"- {clean_title}\n"
+                    
+            if news_str:
+                result = f"[SYSTEM ALERT - LIVE SEARCH RESULTS:\n{news_str}]"
+                _search_cache[query_lower] = (current_time, result)
+                return result
         except Exception:
             pass
         return ""
@@ -120,8 +153,8 @@ def fetch_jina_search(query: str) -> str:
     with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
         future = executor.submit(_search)
         try:
-            # Strict 4-second timeout to prevent lag
-            result = future.result(timeout=4) 
+            # Enforce overall timeout
+            result = future.result(timeout=3.5)
             if result:
                 return result
         except concurrent.futures.TimeoutError:
@@ -163,14 +196,14 @@ def get_realtime_context(query: str) -> str:
         if wiki_ctx:
             context_chunks.append(wiki_ctx)
 
-    # 5. ULTIMATE AUTONOMOUS FALLBACK (Jina Search)
+    # 5. ULTIMATE AUTONOMOUS FALLBACK (Google News RSS Search)
     # If we still have no context, and the query is asking about something current or commercial:
     if not context_chunks:
         search_keywords = ["today", "now", "current", "latest", "time", "date", "event", "update", "upcoming", "price", "stock", "sale", "steam", "review", "release", "buy", "vs", "compare"]
         if any(word in query.lower() for word in search_keywords) and len(query.split()) >= 2:
-            jina_ctx = fetch_jina_search(query)
-            if jina_ctx:
-                context_chunks.append(jina_ctx)
+            search_ctx = fetch_google_news_search(query)
+            if search_ctx:
+                context_chunks.append(search_ctx)
 
     if context_chunks:
         return "\n\n" + "\n\n".join(context_chunks) + "\n"
