@@ -236,6 +236,23 @@ async def chat_endpoint(
             )
             response = response.replace(image_match.group(0), image_md)
 
+        # Infographic
+        info_match = re.search(
+            r"<GENERATE_INFOGRAPHIC>\s*<TITLE>(.*?)</TITLE>\s*<CONTENT>(.*?)</CONTENT>\s*</GENERATE_INFOGRAPHIC>",
+            response,
+            re.DOTALL | re.IGNORECASE,
+        )
+        if info_match:
+            title = info_match.group(1).strip()
+            content = info_match.group(2).strip()
+            
+            lines = content.split('\n')
+            formatted_lines = [f"> {line}" for line in lines]
+            card_content = "\n".join(formatted_lines)
+            
+            formatted_infographic = f"\n\n> 📊 **{title.upper()}**\n> \n{card_content}\n\n"
+            response = response.replace(info_match.group(0), formatted_infographic)
+
         if not req.is_private and session_id:
             ai_msg = ChatMessage(
                 session_id=session_id, role="assistant", content=response
@@ -426,6 +443,21 @@ Please answer in {language}."""
                 is_private=is_private,
                 is_deep_research=is_deep_research,
             )
+
+            # Parse Infographic for file chats as well
+            info_match = re.search(
+                r"<GENERATE_INFOGRAPHIC>\s*<TITLE>(.*?)</TITLE>\s*<CONTENT>(.*?)</CONTENT>\s*</GENERATE_INFOGRAPHIC>",
+                response,
+                re.DOTALL | re.IGNORECASE,
+            )
+            if info_match:
+                title = info_match.group(1).strip()
+                content = info_match.group(2).strip()
+                lines = content.split('\n')
+                formatted_lines = [f"> {line}" for line in lines]
+                card_content = "\n".join(formatted_lines)
+                formatted_infographic = f"\n\n> 📊 **{title.upper()}**\n> \n{card_content}\n\n"
+                response = response.replace(info_match.group(0), formatted_infographic)
 
             if not is_private and session_id:
                 ai_msg = ChatMessage(
