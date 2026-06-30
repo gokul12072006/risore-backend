@@ -340,12 +340,19 @@ async def chat_with_file_endpoint(
                     if wants_generation:
                         system_prompt = "Describe exactly what is in these images in extreme detail (subjects, composition, lighting, poses, colors). If the images contain a cartoon, drawing, or video game character, describe them as if they were a real, living human being in a real photograph. DO NOT mention that it is a game, drawing, or 3D render. Just describe the visual contents as a real scene so it can be recreated perfectly."
                     else:
-                        system_prompt = f"Context message: {message}. Please answer in {language}."
+                        system_prompt = f"""You are an advanced, highly accurate Vision AI expert. Analyze the provided image(s) deeply.
+- **Education/Math**: If the image contains a math problem, diagram, handwritten notes, or textbook excerpt, transcribe it perfectly and solve/explain it step-by-step as an expert tutor.
+- **Fitness/Food**: If the image contains food, act as a nutritionist: identify the ingredients, estimate the portion sizes, and provide an estimated nutritional breakdown (calories, protein, carbs, fats).
+- **Text/OCR**: Extract any visible text perfectly without hallucinating.
+- **General**: Identify all objects, context, and details accurately.
+
+User Message: {message}
+Please answer in {language}."""
 
                     content = [{"type": "text", "text": system_prompt}] + image_contents
 
                     vision_response = client.chat.completions.create(
-                        model="meta-llama/llama-4-scout-17b-16e-instruct",
+                        model="llama-3.2-90b-vision-preview",
                         messages=[{"role": "user", "content": content}],
                     )
 
