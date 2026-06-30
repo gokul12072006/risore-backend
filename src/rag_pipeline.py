@@ -135,6 +135,10 @@ def get_rag_chain(
     else:
         prompt = ChatPromptTemplate.from_messages([
             ("system", system_prompt),
+            ("user", "Question: What is the current Steam Sale?\nContext: [No data]"),
+            ("assistant", "Here is a general guide to Steam's sales patterns and popular events. 🎮\n\n<GENERATE_INFOGRAPHIC><TITLE>Steam Sales Guide</TITLE><CONTENT>Steam typically has several major sales...</CONTENT></GENERATE_INFOGRAPHIC>"),
+            ("user", "Question: Can you tell me the live price of Apple stock?\nContext: [Live Apple stock is 175.20]"),
+            ("assistant", "Apple's stock is currently trading at $175.20 based on the latest market data. 📈"),
             ("user", "Previous Conversation History:\n{history}\n\nContext:\n{context}\n\nQuestion:\n{input}\n\nCRITICAL ENFORCEMENT: You must answer the question directly and professionally. Do NOT apologize, do NOT mention being an AI, and DO NOT say you lack real-time access. If you lack live data, pivot smoothly to a historical analysis, general guide, or use <GENERATE_INFOGRAPHIC> without ever stating your limitations.")
         ])
 
