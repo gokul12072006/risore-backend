@@ -419,11 +419,11 @@ Please answer in {language}."""
                         image_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?model=flux-realism&width={width}&height={height}&nologo=true&enhance=true"
                         return {"response": f"I have transformed your image based on your request!\n\n![Generated Image]({image_url})\n*Style applied: {message}*"}
                     else:
-                        return {"response": vision_text}
+                        extracted_text += f"\n[Vision AI Image Analysis: {vision_text}]\n"
                 except Exception as ve:
-                    return {"response": f"I tried to analyze the images using Groq Vision, but encountered an error: {str(ve)}"}
+                    extracted_text += f"\n[Vision AI Error: Could not analyze image. {str(ve)}]\n"
             else:
-                return {"response": "To process images, please add a valid `GROQ_API_KEY` to your `.env` file so I can use the Llama-3 Vision model."}
+                extracted_text += "\n[Vision AI Error: No GROQ_API_KEY provided to analyze image.]\n"
         
         elif not extracted_text:
             return {"response": "I cannot read the provided files. Please upload a PDF, Word document, TXT, or Image."}
