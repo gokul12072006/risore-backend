@@ -4,6 +4,9 @@ import os
 import re
 import urllib.parse
 import uuid
+import threading
+import time
+import requests
 from typing import List, Optional
 
 import firebase_admin
@@ -660,6 +663,35 @@ async def get_session_messages(
 @app.get("/api/trends")
 async def get_trends_api():
     return get_trending_news(3)
+
+
+@app.get("/api/ping")
+async def ping():
+    return {"status": "awake"}
+
+
+def keep_awake():
+    """Background daemon to ping the server every 10 minutes to prevent Render from sleeping."""
+    url = os.environ.get("RENDER_EXTERNAL_URL")
+    if not url:
+        return
+        
+    ping_url = f"{url}/api/ping"
+    while True:
+        try:
+            time.sleep(600)  # 600 seconds = 10 minutes
+            requests.get(ping_url, timeout=10)
+            print(f"Keep-alive daemon pinged {ping_url} successfully.")
+        except Exception as e:
+            print(f"Keep-alive daemon failed to ping {ping_url}: {e}")
+
+
+@app.on_event("startup")
+async def startup_event():
+    if os.environ.get("RENDER_EXTERNAL_URL"):
+        print("Starting anti-sleep keep-alive daemon...")
+        daemon_thread = threading.Thread(target=keep_awake, daemon=True)
+        daemon_thread.start()
 
 
 # Mount the static web files so the website works exactly like ChatGPT on the root URL
