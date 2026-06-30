@@ -73,6 +73,7 @@ MODE_INSTRUCTIONS = {
     "Prioritise": "CRITICAL MODE INSTRUCTION: Focus your answer purely on actionable steps. Rank them strictly by importance and urgency. Tell the user what to do first, second, and third.",
     "Optimise": "CRITICAL MODE INSTRUCTION: Focus your answer on efficiency. How can this be improved? Discuss cost reduction, code refactoring, performance maximization, and scaling.",
     "Case Study": "CRITICAL MODE INSTRUCTION: Format your response strictly as a professional business/technical Case Study. Use headers: Background, Challenge, Solution, and Outcome.",
+    "Friendly": "CRITICAL MODE INSTRUCTION: You are now a highly friendly, fun, and energetic AI, similar to a Character.ai persona! Use enthusiastic language, lots of emojis, and be conversational like a best friend. Keep the tone light-hearted, empathetic, and highly engaging while answering the user's questions."
 }
 
 
@@ -393,7 +394,7 @@ Please answer in {language}."""
                     content = [{"type": "text", "text": system_prompt}] + image_contents
 
                     vision_response = client.chat.completions.create(
-                        model="llama-3.2-90b-vision-preview",
+                        model="llama-3.2-11b-vision-preview",
                         messages=[{"role": "user", "content": content}],
                     )
 
