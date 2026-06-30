@@ -25,4 +25,5 @@ sqlalchemy
 requests
 beautifulsoup4
 markdown-pdf
+duckduckgo-search
 

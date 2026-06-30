@@ -1,6 +1,6 @@
 import re
 import requests
-from ddgs import DDGS
+from duckduckgo_search import DDGS
 from src.llm import get_llm
 from langchain_core.messages import HumanMessage  # type: ignore
 
