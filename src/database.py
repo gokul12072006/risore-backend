@@ -58,6 +58,16 @@ class ChatMessage(Base):
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
 
+class ProactiveSuggestion(Base):
+    __tablename__ = "proactive_suggestions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(String, index=True, default="global")
+    content = Column(String, nullable=False)
+    is_read = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+
 # Create tables if they don't exist
 Base.metadata.create_all(bind=engine)
 

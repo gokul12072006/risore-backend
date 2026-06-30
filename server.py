@@ -275,6 +275,13 @@ async def chat_endpoint(
             formatted_infographic = f"\n\n> 📊 **{title.upper()}**\n> \n{card_content}\n\n"
             response = response.replace(info_match.group(0), formatted_infographic)
 
+        # Format DeepSeek <think> tags gracefully
+        think_match = re.search(r"<think>(.*?)</think>", response, re.DOTALL | re.IGNORECASE)
+        if think_match:
+            thought_process = think_match.group(1).strip()
+            thought_md = f"> 🧠 **Risore's Internal Thought Process**\n> \n> {thought_process.replace(chr(10), chr(10) + '> ')}\n\n"
+            response = response.replace(think_match.group(0), thought_md)
+
         if not req.is_private and session_id:
             ai_msg = ChatMessage(
                 session_id=session_id, role="assistant", content=response
@@ -673,6 +680,22 @@ async def ping():
     return {"status": "awake"}
 
 
+@app.get("/api/proactive")
+async def get_proactive_insights(
+    db: Session = Depends(get_db)
+):
+    from src.database import ProactiveSuggestion
+    
+    # Fetch latest unread insight
+    insight = db.query(ProactiveSuggestion).filter(ProactiveSuggestion.is_read == False).order_by(ProactiveSuggestion.created_at.desc()).first()
+    
+    if insight:
+        insight.is_read = True
+        db.commit()
+        return {"has_insight": True, "insight": insight.content}
+    return {"has_insight": False}
+
+
 def keep_awake():
     """Background daemon to ping the server every 10 minutes to prevent Render from sleeping."""
     url = os.environ.get("RENDER_EXTERNAL_URL")
@@ -695,6 +718,11 @@ async def startup_event():
         print("Starting anti-sleep keep-alive daemon...")
         daemon_thread = threading.Thread(target=keep_awake, daemon=True)
         daemon_thread.start()
+
+    print("Starting Autonomous Agent daemon...")
+    from src.autonomous_agent import autonomous_daemon
+    agent_thread = threading.Thread(target=autonomous_daemon, args=(60,), daemon=True)
+    agent_thread.start()
 
 
 # Mount the static web files so the website works exactly like ChatGPT on the root URL
