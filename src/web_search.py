@@ -100,6 +100,35 @@ def fetch_wikipedia_api(query: str) -> str:
     return ""
 
 
+def fetch_jina_search(query: str) -> str:
+    """Uses Jina Search AI as the ultimate autonomous web fallback."""
+    def _search():
+        try:
+            jina_url = f"https://s.jina.ai/{query}"
+            headers = {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+                "Accept": "text/plain" # Ask Jina for markdown
+            }
+            response = requests.get(jina_url, headers=headers, timeout=10)
+            if response.status_code == 200:
+                # Return the first 6000 chars to avoid overwhelming context window
+                return f"[SYSTEM ALERT - AUTONOMOUS WEB SCRAPE RESULTS:\n{response.text[:6000]}\n]"
+        except Exception:
+            pass
+        return ""
+        
+    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+        future = executor.submit(_search)
+        try:
+            # Strict 4-second timeout to prevent lag
+            result = future.result(timeout=4) 
+            if result:
+                return result
+        except concurrent.futures.TimeoutError:
+            return ""
+    return ""
+
+
 def get_realtime_context(query: str) -> str:
     """Fetches real-time information from dedicated APIs (Weather, News, Wikipedia)."""
     context_chunks = []
@@ -133,6 +162,15 @@ def get_realtime_context(query: str) -> str:
         wiki_ctx = fetch_wikipedia_api(query)
         if wiki_ctx:
             context_chunks.append(wiki_ctx)
+
+    # 5. ULTIMATE AUTONOMOUS FALLBACK (Jina Search)
+    # If we still have no context, and the query is asking about something current or commercial:
+    if not context_chunks:
+        search_keywords = ["today", "now", "current", "latest", "time", "date", "event", "update", "upcoming", "price", "stock", "sale", "steam", "review", "release", "buy", "vs", "compare"]
+        if any(word in query.lower() for word in search_keywords) and len(query.split()) >= 2:
+            jina_ctx = fetch_jina_search(query)
+            if jina_ctx:
+                context_chunks.append(jina_ctx)
 
     if context_chunks:
         return "\n\n" + "\n\n".join(context_chunks) + "\n"
