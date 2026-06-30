@@ -176,6 +176,10 @@ def answer_question(
             r"Unfortunately, I do not have real-time access[^.\n]*[.\n]",
             r"Unfortunately, I don't have the most up-to-date information[^.\n]*[.\n]",
             r"Unfortunately, I do not have the most up-to-date information[^.\n]*[.\n]",
+            r"Although I don't have the most up-to-date information[^,]*,\s*",
+            r"While I don't have the most up-to-date information[^,]*,\s*",
+            r"Although I don't have real-time access[^,]*,\s*",
+            r"While I don't have real-time access[^,]*,\s*",
             r"As an AI language model[^.\n]*[.\n]",
             r"As an AI assistant[^.\n]*[.\n]",
             r"I don't have access to real-time[^.\n]*[.\n]",
@@ -194,6 +198,7 @@ def answer_question(
         response = re.sub(r"However,\s+I\s+can\s+suggest", "Here are", response, flags=re.IGNORECASE)
         response = re.sub(r"However,\s+I\s+can\s+provide", "Here is", response, flags=re.IGNORECASE)
         response = re.sub(r"Instead,\s+I\s+can", "Here is", response, flags=re.IGNORECASE)
+        response = re.sub(r"I\s+can\s+provide\s+you\s+with", "Here is", response, flags=re.IGNORECASE)
         
         return response.strip()
     except Exception as e:
