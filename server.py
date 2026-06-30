@@ -236,6 +236,24 @@ async def chat_endpoint(
             )
             response = response.replace(image_match.group(0), image_md)
 
+        # Data Charts (QuickChart.io)
+        chart_match = re.search(
+            r"<GENERATE_CHART>\s*(.*?)\s*</GENERATE_CHART>",
+            response,
+            re.DOTALL | re.IGNORECASE,
+        )
+        if chart_match:
+            chart_json_str = chart_match.group(1).strip()
+            # Clean up potential markdown formatting around json
+            chart_json_str = re.sub(r"^```(?:json)?\n?", "", chart_json_str)
+            chart_json_str = re.sub(r"\n?```$", "", chart_json_str)
+            
+            import urllib.parse
+            encoded_chart = urllib.parse.quote(chart_json_str)
+            chart_url = f"https://quickchart.io/chart?c={encoded_chart}&bkg=white"
+            chart_md = f"\n\n![AI Generated Chart]({chart_url})\n"
+            response = response.replace(chart_match.group(0), chart_md)
+
         # Infographic
         info_match = re.search(
             r"<GENERATE_INFOGRAPHIC>\s*<TITLE>(.*?)</TITLE>\s*<CONTENT>(.*?)</CONTENT>\s*</GENERATE_INFOGRAPHIC>",
@@ -443,6 +461,23 @@ Please answer in {language}."""
                 is_private=is_private,
                 is_deep_research=is_deep_research,
             )
+
+            # Data Charts (QuickChart.io)
+            chart_match = re.search(
+                r"<GENERATE_CHART>\s*(.*?)\s*</GENERATE_CHART>",
+                response,
+                re.DOTALL | re.IGNORECASE,
+            )
+            if chart_match:
+                chart_json_str = chart_match.group(1).strip()
+                chart_json_str = re.sub(r"^```(?:json)?\n?", "", chart_json_str)
+                chart_json_str = re.sub(r"\n?```$", "", chart_json_str)
+                
+                import urllib.parse
+                encoded_chart = urllib.parse.quote(chart_json_str)
+                chart_url = f"https://quickchart.io/chart?c={encoded_chart}&bkg=white"
+                chart_md = f"\n\n![AI Generated Chart]({chart_url})\n"
+                response = response.replace(chart_match.group(0), chart_md)
 
             # Parse Infographic for file chats as well
             info_match = re.search(
