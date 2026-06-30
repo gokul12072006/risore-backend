@@ -70,16 +70,7 @@ def get_rag_chain(
         
         CRITICAL RULE FOR IMAGES: If the user asks for a schedule or plan as an image, DO NOT use [GENERATE_IMAGE]. AI diffusion models cannot render text accurately. You MUST use the <GENERATE_INFOGRAPHIC> tag instead so the system can render the text natively into a high-res image.
         When generating the [GENERATE_IMAGE] prompt for visual art, you MUST autonomously upgrade the user's request into a highly detailed, professional prompt (mentioning photorealism, 8k, lighting, camera angles, etc.) and intelligently choose the width and height (e.g., 3840|2160 for 4K/landscape, 2160|3840 for portrait, 1024|1024 for square).
-        Only output the exact tag. The system will parse it and provide a download link.
-        
-        Previous Conversation History:
-        {history}
-        
-        Context: {context}
-        
-        Question: {input}
-        
-        Answer:"""
+        Only output the exact tag. The system will parse it and provide a download link."""
     else:
         system_prompt = (
             """You are Risore 1.0, a highly capable, reliable, and humble open-source AI assistant. You must never claim to be "better" than ChatGPT, Claude, or other AIs. Focus entirely on being a good, helpful assistant.
@@ -116,16 +107,7 @@ def get_rag_chain(
         
         CRITICAL RULE FOR IMAGES: If the user asks for a schedule or plan as an image, DO NOT use [GENERATE_IMAGE]. AI diffusion models cannot render text accurately. You MUST use the <GENERATE_INFOGRAPHIC> tag instead so the system can render the text natively into a high-res image.
         When generating the [GENERATE_IMAGE] prompt for visual art, you MUST autonomously upgrade the user's request into a highly detailed, professional prompt (mentioning photorealism, 8k, lighting, camera angles, etc.) and intelligently choose the width and height (e.g., 3840|2160 for 4K/landscape, 2160|3840 for portrait, 1024|1024 for square).
-        Only output the exact tag. The system will parse it and provide a download link.
-        
-        Previous Conversation History:
-        {history}
-        
-        Context: {context}
-        
-        Question: {input}
-        
-        Answer:"""
+        Only output the exact tag. The system will parse it and provide a download link."""
         )
 
     guardrail = """
@@ -145,10 +127,16 @@ def get_rag_chain(
 
     system_prompt += guardrail
 
+    from langchain_core.prompts import ChatPromptTemplate
+    
     if custom_prompt:
-        system_prompt = custom_prompt
-
-    prompt = PromptTemplate.from_template(system_prompt)
+        # If custom prompt is provided, we assume it's a full string template
+        prompt = PromptTemplate.from_template(custom_prompt)
+    else:
+        prompt = ChatPromptTemplate.from_messages([
+            ("system", system_prompt),
+            ("user", "Previous Conversation History:\n{history}\n\nContext:\n{context}\n\nQuestion:\n{input}")
+        ])
 
     from langchain_core.runnables import RunnableLambda  # type: ignore
 
