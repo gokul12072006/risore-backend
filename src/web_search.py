@@ -32,8 +32,26 @@ def fetch_url_content(url: str) -> str:
 
 
 def needs_realtime(query: str) -> bool:
-    """Check if the query likely needs real-time information."""
-    keywords = ["weather", "today", "now", "current", "news", "latest", "time", "date"]
+    """Use the AI's own brain (LLM) to autonomously decide if it needs to search the web."""
+    try:
+        from src.llm import get_llm
+        llm = get_llm()
+        prompt = (
+            f"Analyze the following user query: '{query}'\n"
+            "Does this query require searching the live internet for current events, real-time data, specific facts, Wikipedia knowledge, or recent updates? "
+            "Think carefully. If it's a casual greeting or a general logic question, say NO. If it asks for information about the world, products, news, or facts, say YES. "
+            "Reply ONLY with the exact word 'YES' or 'NO'."
+        )
+        response = llm.invoke(prompt).strip().upper()
+        if "YES" in response:
+            return True
+        elif "NO" in response:
+            return False
+    except Exception:
+        pass
+    
+    # Fallback to expanded keyword heuristic if LLM fails
+    keywords = ["weather", "today", "now", "current", "news", "latest", "time", "date", "event", "update", "upcoming", "who", "what", "where", "when", "how", "price", "stock", "wiki"]
     query_lower = query.lower()
     return any(word in query_lower for word in keywords)
 
