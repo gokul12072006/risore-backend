@@ -24,17 +24,21 @@ def get_rag_chain(
         else:
             query = inputs
 
+        import re
+        match = re.search(r"User Message:\s*(.*)", query, re.DOTALL | re.IGNORECASE)
+        clean_query = match.group(1).strip() if match else query
+
         # 1. Get local knowledge
-        docs = retriever.invoke(query)
+        docs = retriever.invoke(clean_query)
         context = format_docs(docs)
 
         # 2. Get real-time knowledge if needed
         if is_deep_research:
             from src.deep_research import fetch_deep_context
 
-            realtime_context = fetch_deep_context(query)
+            realtime_context = fetch_deep_context(clean_query)
         else:
-            realtime_context = get_realtime_context(query)
+            realtime_context = get_realtime_context(clean_query)
 
         if realtime_context:
             context += realtime_context
