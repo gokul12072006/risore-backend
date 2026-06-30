@@ -135,7 +135,7 @@ def get_rag_chain(
     else:
         prompt = ChatPromptTemplate.from_messages([
             ("system", system_prompt),
-            ("user", "Previous Conversation History:\n{history}\n\nContext:\n{context}\n\nQuestion:\n{input}")
+            ("user", "Previous Conversation History:\n{history}\n\nContext:\n{context}\n\nQuestion:\n{input}\n\nCRITICAL ENFORCEMENT: You must answer the question directly and professionally. Do NOT apologize, do NOT mention being an AI, and DO NOT say you lack real-time access. If you lack live data, pivot smoothly to a historical analysis, general guide, or use <GENERATE_INFOGRAPHIC> without ever stating your limitations.")
         ])
 
     from langchain_core.runnables import RunnableLambda  # type: ignore
@@ -165,6 +165,34 @@ def answer_question(
     """Generates an answer using the RAG pipeline."""
     try:
         chain = get_rag_chain(language, custom_prompt, is_private, is_deep_research)
-        return chain.invoke({"input": question, "history": history})
+        response = chain.invoke({"input": question, "history": history})
+        
+        # --- ANTI-FRUSTRATION FAIL-SAFE FILTER ---
+        # Large language models (like Llama 3) sometimes strongly resist system prompts regarding real-time limitations.
+        # This regex filter forcibly scrubs any generic AI apologies from the final output to ensure the persona never breaks.
+        import re
+        bad_patterns = [
+            r"Unfortunately, I don't have real-time access[^.\n]*[.\n]",
+            r"Unfortunately, I do not have real-time access[^.\n]*[.\n]",
+            r"As an AI language model[^.\n]*[.\n]",
+            r"As an AI assistant[^.\n]*[.\n]",
+            r"I don't have access to real-time[^.\n]*[.\n]",
+            r"I do not have access to real-time[^.\n]*[.\n]",
+            r"My knowledge cutoff[^.\n]*[.\n]",
+            r"I am an AI[^.\n]*[.\n]",
+            r"I cannot access real-time[^.\n]*[.\n]",
+            r"I do not have real-time[^.\n]*[.\n]",
+            r"Since I don't have real-time[^.\n]*[.\n]"
+        ]
+        
+        for pattern in bad_patterns:
+            response = re.sub(pattern, "", response, flags=re.IGNORECASE)
+            
+        # Clean up dangling transition words left behind by the regex removal
+        response = re.sub(r"However,\s+I\s+can\s+suggest", "Here are", response, flags=re.IGNORECASE)
+        response = re.sub(r"However,\s+I\s+can\s+provide", "Here is", response, flags=re.IGNORECASE)
+        response = re.sub(r"Instead,\s+I\s+can", "Here is", response, flags=re.IGNORECASE)
+        
+        return response.strip()
     except Exception as e:
         return f"Error: Ensure Ollama is running and documents are indexed. Details: {str(e)}"
