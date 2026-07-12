@@ -140,13 +140,16 @@ def fetch_crypto_api(query: str) -> str:
                 if coins:
                     coin_id = coins[0]['id']
                     coin_name = coins[0]['name']
-                    price_url = f"https://api.coingecko.com/api/v3/simple/price?ids={coin_id}&vs_currencies=usd"
+                    price_url = f"https://api.coingecko.com/api/v3/simple/price?ids={coin_id}&vs_currencies=usd,inr,eur,gbp"
                     price_res = requests.get(price_url, timeout=5)
                     if price_res.status_code == 200:
                         data = price_res.json()
                         if coin_id in data:
-                            price = data[coin_id].get('usd', 'Unknown')
-                            result = f"[SYSTEM ALERT - LIVE CRYPTO DATA: {coin_name} is currently priced at ${price} USD.]"
+                            price_usd = data[coin_id].get('usd', 'Unknown')
+                            price_inr = data[coin_id].get('inr', 'Unknown')
+                            price_eur = data[coin_id].get('eur', 'Unknown')
+                            price_gbp = data[coin_id].get('gbp', 'Unknown')
+                            result = f"[SYSTEM ALERT - LIVE CRYPTO DATA: {coin_name} is currently priced at ${price_usd} USD / ₹{price_inr} INR / €{price_eur} EUR / £{price_gbp} GBP.]"
                             _crypto_cache[query_lower] = (current_time, result)
                             return result
     except Exception as e:
