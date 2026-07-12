@@ -107,14 +107,45 @@ def fetch_wikipedia_api(query: str) -> str:
 _search_cache = {}
 CACHE_DURATION = 3600  # 1 hour
 
-def fetch_google_news_search(query: str) -> str:
-    """Uses Google News RSS Search as the ultimate autonomous web fallback."""
+def fetch_crypto_api(query: str) -> str:
+    """Uses LLM to extract coin name and fetches price from CoinGecko."""
+    try:
+        from src.llm import get_llm
+        from langchain_core.messages import HumanMessage
+        
+        llm = get_llm()
+        prompt = f"Extract the cryptocurrency or stock name from this query. Output ONLY the coin name (e.g. bitcoin, ethereum, beldex), nothing else. If it's not about crypto/stocks, output NONE. Query: '{query}'"
+        
+        response = llm.invoke([HumanMessage(content=prompt)])
+        coin = response.content.strip().lower() if hasattr(response, 'content') else str(response).strip().lower()
+        
+        if coin != "none" and coin != "":
+            search_url = f"https://api.coingecko.com/api/v3/search?query={urllib.parse.quote(coin)}"
+            search_res = requests.get(search_url, timeout=5)
+            if search_res.status_code == 200:
+                coins = search_res.json().get('coins', [])
+                if coins:
+                    coin_id = coins[0]['id']
+                    coin_name = coins[0]['name']
+                    price_url = f"https://api.coingecko.com/api/v3/simple/price?ids={coin_id}&vs_currencies=usd"
+                    price_res = requests.get(price_url, timeout=5)
+                    if price_res.status_code == 200:
+                        data = price_res.json()
+                        if coin_id in data:
+                            price = data[coin_id].get('usd', 'Unknown')
+                            return f"[SYSTEM ALERT - LIVE CRYPTO DATA: {coin_name} is currently priced at ${price} USD.]"
+    except Exception as e:
+        print(f"Crypto API error: {e}")
+    return ""
+
+
+def fetch_universal_search(query: str) -> str:
+    """Uses DuckDuckGo Search and Jina Reader to autonomously answer any query."""
     global _search_cache
     
     current_time = time.time()
     query_lower = query.lower().strip()
     
-    # Check cache
     if query_lower in _search_cache:
         cached_time, cached_result = _search_cache[query_lower]
         if current_time - cached_time < CACHE_DURATION:
@@ -122,39 +153,38 @@ def fetch_google_news_search(query: str) -> str:
             
     def _search():
         try:
-            url = f"https://news.google.com/rss/search?q={urllib.parse.quote(query)}"
-            req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-            # Strict 3-second timeout
-            with urllib.request.urlopen(req, timeout=3) as response:
-                xml_data = response.read()
-                
-            root = ET.fromstring(xml_data)
-            items = root.findall(".//item")
+            from duckduckgo_search import DDGS
+            ddgs = DDGS()
+            results = ddgs.text(query, max_results=2)
             
-            if not items:
+            if not results:
                 return ""
                 
-            news_str = ""
-            for item in items[:4]:  # Top 4 results
-                title_elem = item.find("title")
-                title = title_elem.text if title_elem is not None and title_elem.text else ""
-                clean_title = title.rsplit(" - ", 1)[0] if " - " in title else title
-                if clean_title:
-                    news_str += f"- {clean_title}\n"
-                    
-            if news_str:
-                result = f"[SYSTEM ALERT - LIVE SEARCH RESULTS:\n{news_str}]"
+            context = ""
+            for r in results:
+                url = r.get("href")
+                if url and not url.endswith((".pdf", ".jpg")):
+                    jina_url = f"https://r.jina.ai/{url}"
+                    headers = {"User-Agent": "Mozilla/5.0"}
+                    try:
+                        res = requests.get(jina_url, headers=headers, timeout=6)
+                        if res.status_code == 200:
+                            context += f"--- Source: {url} ---\n{res.text[:3000]}\n\n"
+                    except Exception:
+                        pass
+            
+            if context:
+                result = f"[SYSTEM ALERT - UNIVERSAL WEB SEARCH RESULTS:\n{context}]"
                 _search_cache[query_lower] = (current_time, result)
                 return result
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"Universal search error: {e}")
         return ""
         
     with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
         future = executor.submit(_search)
         try:
-            # Enforce overall timeout
-            result = future.result(timeout=3.5)
+            result = future.result(timeout=15)
             if result:
                 return result
         except concurrent.futures.TimeoutError:
@@ -181,7 +211,14 @@ def get_realtime_context(query: str) -> str:
             context_chunks.append(weather_context)
             return "\n\n" + "\n\n".join(context_chunks) + "\n"
 
-    # 3. DEDICATED API ROUTER (News)
+    # 3. DEDICATED API ROUTER (Crypto)
+    if any(word in query.lower() for word in ["price", "crypto", "bitcoin", "beldex", "stock", "usd"]):
+        crypto_context = fetch_crypto_api(query)
+        if crypto_context:
+            context_chunks.append(crypto_context)
+            return "\n\n" + "\n\n".join(context_chunks) + "\n"
+
+    # 4. DEDICATED API ROUTER (News)
     if "news" in query.lower() or "latest update" in query.lower() or "trending" in query.lower():
         news_items = get_trending_news(5)
         if news_items:
@@ -189,19 +226,19 @@ def get_realtime_context(query: str) -> str:
             context_chunks.append(f"[SYSTEM ALERT - LIVE BREAKING NEWS HEADLINES:\n{news_str}\n]")
             return "\n\n" + "\n\n".join(context_chunks) + "\n"
             
-    # 4. FALLBACK TO WIKIPEDIA (For General Knowledge)
+    # 5. FALLBACK TO WIKIPEDIA (For General Knowledge)
     keywords = ["who", "what", "where", "when", "why", "how", "history", "biography", "wiki", "explain", "details", "president", "country", "capital"]
     if any(word in query.lower() for word in keywords) and len(query.split()) >= 2:
         wiki_ctx = fetch_wikipedia_api(query)
         if wiki_ctx:
             context_chunks.append(wiki_ctx)
 
-    # 5. ULTIMATE AUTONOMOUS FALLBACK (Google News RSS Search)
-    # If we still have no context, and the query is asking about something current or commercial:
+    # 6. ULTIMATE AUTONOMOUS FALLBACK (Universal Web Search)
+    # If we still have no context, and the query is asking about something current:
     if not context_chunks:
-        search_keywords = ["today", "now", "current", "latest", "time", "date", "event", "update", "upcoming", "price", "stock", "sale", "steam", "review", "release", "buy", "vs", "compare"]
+        search_keywords = ["today", "now", "current", "latest", "time", "date", "event", "update", "upcoming", "sale", "steam", "review", "release", "buy", "vs", "compare", "score", "game", "match", "movie"]
         if any(word in query.lower() for word in search_keywords) and len(query.split()) >= 2:
-            search_ctx = fetch_google_news_search(query)
+            search_ctx = fetch_universal_search(query)
             if search_ctx:
                 context_chunks.append(search_ctx)
 
