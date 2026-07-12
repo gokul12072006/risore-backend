@@ -71,6 +71,7 @@ def get_llm():
                 api_key=openrouter_api_key,
                 base_url="https://openrouter.ai/api/v1",
                 temperature=0.6,
+                max_tokens=4096,
             )
         except Exception as e:
             print(f"OpenRouter init failed: {e}")
