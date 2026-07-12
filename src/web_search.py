@@ -107,8 +107,21 @@ def fetch_wikipedia_api(query: str) -> str:
 _search_cache = {}
 CACHE_DURATION = 3600  # 1 hour
 
+_crypto_cache = {}
+CRYPTO_CACHE_DURATION = 60  # 60 seconds
+
 def fetch_crypto_api(query: str) -> str:
     """Uses LLM to extract coin name and fetches price from CoinGecko."""
+    global _crypto_cache
+    
+    current_time = time.time()
+    query_lower = query.lower().strip()
+    
+    if query_lower in _crypto_cache:
+        cached_time, cached_result = _crypto_cache[query_lower]
+        if current_time - cached_time < CRYPTO_CACHE_DURATION:
+            return cached_result
+
     try:
         from src.llm import get_llm
         from langchain_core.messages import HumanMessage
@@ -133,7 +146,9 @@ def fetch_crypto_api(query: str) -> str:
                         data = price_res.json()
                         if coin_id in data:
                             price = data[coin_id].get('usd', 'Unknown')
-                            return f"[SYSTEM ALERT - LIVE CRYPTO DATA: {coin_name} is currently priced at ${price} USD.]"
+                            result = f"[SYSTEM ALERT - LIVE CRYPTO DATA: {coin_name} is currently priced at ${price} USD.]"
+                            _crypto_cache[query_lower] = (current_time, result)
+                            return result
     except Exception as e:
         print(f"Crypto API error: {e}")
     return ""
@@ -160,18 +175,27 @@ def fetch_universal_search(query: str) -> str:
             if not results:
                 return ""
                 
+            def _fetch_jina(url):
+                if not url or url.endswith((".pdf", ".jpg")):
+                    return ""
+                jina_url = f"https://r.jina.ai/{url}"
+                headers = {"User-Agent": "Mozilla/5.0"}
+                try:
+                    res = requests.get(jina_url, headers=headers, timeout=6)
+                    if res.status_code == 200:
+                        return f"--- Source: {url} ---\n{res.text[:3000]}\n\n"
+                except Exception:
+                    pass
+                return ""
+
             context = ""
-            for r in results:
-                url = r.get("href")
-                if url and not url.endswith((".pdf", ".jpg")):
-                    jina_url = f"https://r.jina.ai/{url}"
-                    headers = {"User-Agent": "Mozilla/5.0"}
-                    try:
-                        res = requests.get(jina_url, headers=headers, timeout=6)
-                        if res.status_code == 200:
-                            context += f"--- Source: {url} ---\n{res.text[:3000]}\n\n"
-                    except Exception:
-                        pass
+            urls_to_fetch = [r.get("href") for r in results if r.get("href")]
+            
+            with concurrent.futures.ThreadPoolExecutor(max_workers=3) as jina_executor:
+                fetched_results = jina_executor.map(_fetch_jina, urls_to_fetch)
+                for res_text in fetched_results:
+                    if res_text:
+                        context += res_text
             
             if context:
                 result = f"[SYSTEM ALERT - UNIVERSAL WEB SEARCH RESULTS:\n{context}]"
