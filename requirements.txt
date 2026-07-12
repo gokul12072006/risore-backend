@@ -26,4 +26,5 @@ requests
 beautifulsoup4
 markdown-pdf
 duckduckgo-search
-
+langchain-openai
+langchain-google-genai
