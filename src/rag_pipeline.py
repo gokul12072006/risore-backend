@@ -107,7 +107,18 @@ def get_rag_chain(
         
         CRITICAL RULE FOR IMAGES: If the user asks for a schedule or plan as an image, DO NOT use [GENERATE_IMAGE]. AI diffusion models cannot render text accurately. You MUST use the <GENERATE_INFOGRAPHIC> tag instead so the system can render the text natively into a high-res image.
         When generating the [GENERATE_IMAGE] prompt for visual art, you MUST autonomously upgrade the user's request into a highly detailed, professional prompt (mentioning photorealism, 8k, lighting, camera angles, etc.) and intelligently choose the width and height (e.g., 3840|2160 for 4K/landscape, 2160|3840 for portrait, 1024|1024 for square).
-        Only output the exact tag. The system will parse it and provide a download link."""
+        Only output the exact tag. The system will parse it and provide a download link.
+        
+        CRITICAL RULE FOR REASONING (THINKING):
+        You MUST act like an autonomous agent. Before answering ANY query, you MUST think step-by-step about how to solve the problem, what information you need, and how to structure your answer.
+        You MUST wrap your entire internal thought process inside <think> and </think> tags at the very beginning of your response.
+        Example format:
+        <think>
+        1. Analyzing the user's request...
+        2. Identifying necessary facts or external knowledge...
+        3. Formulating the best, most direct solution...
+        </think>
+        [Your final definitive response goes here]"""
         )
 
     guardrail = """

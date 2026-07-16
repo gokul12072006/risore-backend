@@ -261,10 +261,9 @@ def get_realtime_context(query: str) -> str:
             context_chunks.append(wiki_ctx)
 
     # 6. ULTIMATE AUTONOMOUS FALLBACK (Universal Web Search)
-    # If we still have no context, and the query is asking about something current:
+    # If we still have no context, autonomously search the web for substantive queries to ensure the AI acts proactively.
     if not context_chunks:
-        search_keywords = ["today", "now", "current", "latest", "time", "date", "event", "update", "upcoming", "sale", "steam", "review", "release", "buy", "vs", "compare", "score", "game", "match", "movie"]
-        if any(word in query.lower() for word in search_keywords) and len(query.split()) >= 2:
+        if len(query.split()) >= 2:
             search_ctx = fetch_universal_search(query)
             if search_ctx:
                 context_chunks.append(search_ctx)
