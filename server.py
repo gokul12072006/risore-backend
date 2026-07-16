@@ -258,6 +258,23 @@ async def chat_endpoint(
             chart_md = f"\n\n![AI Generated Chart]({chart_url})\n"
             response = response.replace(chart_match.group(0), chart_md)
 
+        # Weather Widget (SVG)
+        weather_match = re.search(
+            r"<GENERATE_WEATHER>\s*<CITY>(.*?)</CITY>\s*</GENERATE_WEATHER>",
+            response,
+            re.DOTALL | re.IGNORECASE,
+        )
+        if weather_match:
+            city = weather_match.group(1).strip()
+            filename = f"weather_{uuid.uuid4().hex[:8]}.svg"
+            filepath = os.path.join("web", "downloads", filename)
+            os.makedirs(os.path.join("web", "downloads"), exist_ok=True)
+            
+            from src.file_generator import generate_weather_svg
+            if generate_weather_svg(city, filepath):
+                weather_md = f"\n\n![Weather Widget](/downloads/{filename})\n"
+                response = response.replace(weather_match.group(0), weather_md)
+
         # Infographic
         info_match = re.search(
             r"<GENERATE_INFOGRAPHIC>\s*<TITLE>(.*?)</TITLE>\s*<CONTENT>(.*?)</CONTENT>\s*</GENERATE_INFOGRAPHIC>",
@@ -491,6 +508,23 @@ Please answer in {language}."""
                 chart_url = f"https://quickchart.io/chart?c={encoded_chart}&bkg=white"
                 chart_md = f"\n\n![AI Generated Chart]({chart_url})\n"
                 response = response.replace(chart_match.group(0), chart_md)
+
+            # Weather Widget (SVG)
+            weather_match = re.search(
+                r"<GENERATE_WEATHER>\s*<CITY>(.*?)</CITY>\s*</GENERATE_WEATHER>",
+                response,
+                re.DOTALL | re.IGNORECASE,
+            )
+            if weather_match:
+                city = weather_match.group(1).strip()
+                filename = f"weather_{uuid.uuid4().hex[:8]}.svg"
+                filepath = os.path.join("web", "downloads", filename)
+                os.makedirs(os.path.join("web", "downloads"), exist_ok=True)
+                
+                from src.file_generator import generate_weather_svg
+                if generate_weather_svg(city, filepath):
+                    weather_md = f"\n\n![Weather Widget](/downloads/{filename})\n"
+                    response = response.replace(weather_match.group(0), weather_md)
 
             # Parse Infographic for file chats as well
             info_match = re.search(
