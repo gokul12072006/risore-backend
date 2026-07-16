@@ -292,12 +292,10 @@ async def chat_endpoint(
             formatted_infographic = f"\n\n> 📊 **{title.upper()}**\n> \n{card_content}\n\n"
             response = response.replace(info_match.group(0), formatted_infographic)
 
-        # Format DeepSeek <think> tags gracefully
+        # Hide DeepSeek <think> tags from the user
         think_match = re.search(r"<think>(.*?)</think>", response, re.DOTALL | re.IGNORECASE)
         if think_match:
-            thought_process = think_match.group(1).strip()
-            thought_md = f"> 🧠 **Risore's Internal Thought Process**\n> \n> {thought_process.replace(chr(10), chr(10) + '> ')}\n\n"
-            response = response.replace(think_match.group(0), thought_md)
+            response = response.replace(think_match.group(0), "").strip()
 
         if not req.is_private and session_id:
             ai_msg = ChatMessage(
@@ -541,12 +539,10 @@ Please answer in {language}."""
                 formatted_infographic = f"\n\n> 📊 **{title.upper()}**\n> \n{card_content}\n\n"
                 response = response.replace(info_match.group(0), formatted_infographic)
 
-            # Format DeepSeek <think> tags gracefully for file chats too
+            # Hide DeepSeek <think> tags from the user for file chats too
             think_match = re.search(r"<think>(.*?)</think>", response, re.DOTALL | re.IGNORECASE)
             if think_match:
-                thought_process = think_match.group(1).strip()
-                thought_md = f"> 🧠 **Risore's Internal Thought Process**\n> \n> {thought_process.replace(chr(10), chr(10) + '> ')}\n\n"
-                response = response.replace(think_match.group(0), thought_md)
+                response = response.replace(think_match.group(0), "").strip()
 
             if not is_private and session_id:
                 ai_msg = ChatMessage(
