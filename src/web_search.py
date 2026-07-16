@@ -232,7 +232,8 @@ def get_realtime_context(query: str) -> str:
         return "\n\n" + "\n\n".join(context_chunks) + "\n"
 
     # 2. DEDICATED API ROUTER (Weather)
-    if "weather" in query.lower() or "temperature" in query.lower():
+    weather_keywords = ["weather", "temperature", "forecast", "rain", "sunny", "cloudy", "hot", "cold", "how's the day", "how is the day", "how is it outside"]
+    if any(word in query.lower() for word in weather_keywords):
         weather_context = fetch_weather_api(query)
         if weather_context:
             context_chunks.append(weather_context)
