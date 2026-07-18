@@ -65,13 +65,13 @@ def get_llm():
     if openrouter_api_key and openrouter_api_key != "your_openrouter_api_key_here":
         try:
             from langchain_openai import ChatOpenAI
-            # Defaulting to a high-quality free model on OpenRouter like google/gemini-2.5-flash or deepseek/deepseek-chat
+            # Using a strictly free model on OpenRouter to permanently avoid credit errors
             return ChatOpenAI(
-                model="google/gemini-2.5-flash",
+                model="google/gemini-2.0-flash-exp:free",
                 api_key=openrouter_api_key,
                 base_url="https://openrouter.ai/api/v1",
                 temperature=0.6,
-                max_tokens=4096,
+                max_tokens=2048,
             )
         except Exception as e:
             print(f"OpenRouter init failed: {e}")

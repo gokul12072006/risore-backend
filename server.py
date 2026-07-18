@@ -306,7 +306,24 @@ async def chat_endpoint(
 
         return {"response": response, "session_id": session_id}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        error_msg = f"⚠️ **Risore System Alert**: I encountered an internal error.\n\n```\n{str(e)}\n```\n\n*Please check your API keys or system configuration.*"
+        
+        sid = req.session_id
+        try:
+            if 'session_id' in locals() and session_id:
+                sid = session_id
+        except:
+            pass
+            
+        if sid and not req.is_private:
+            try:
+                ai_msg = ChatMessage(session_id=sid, role="assistant", content=error_msg)
+                db.add(ai_msg)
+                db.commit()
+            except:
+                db.rollback()
+
+        return {"response": error_msg, "session_id": sid}
 
 
 @app.post("/api/feedback")
@@ -559,7 +576,24 @@ Please answer in {language}."""
             }
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        error_msg = f"⚠️ **Risore System Alert**: I encountered an internal error.\n\n```\n{str(e)}\n```\n\n*Please check your API keys or system configuration.*"
+        
+        sid = None
+        try:
+            if 'session_id' in locals() and session_id:
+                sid = session_id
+        except:
+            pass
+            
+        if sid and not is_private:
+            try:
+                ai_msg = ChatMessage(session_id=sid, role="assistant", content=error_msg)
+                db.add(ai_msg)
+                db.commit()
+            except:
+                db.rollback()
+
+        return {"response": error_msg, "session_id": sid}
 
 
 class TaskCreate(BaseModel):
