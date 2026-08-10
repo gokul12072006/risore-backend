@@ -63,8 +63,25 @@ def get_llm():
     gemini_api_key = os.getenv("GEMINI_API_KEY")
     deepseek_api_key = os.getenv("DEEPSEEK_API_KEY")
     groq_api_key = os.getenv("GROQ_API_KEY")
+    omniroute_base_url = os.getenv("OMNIROUTE_BASE_URL")
+    omniroute_api_key = os.getenv("OMNIROUTE_API_KEY", "omniroute")
 
     available_llms = []
+
+    # 0. OmniRoute API (290+ Providers, unified gateway)
+    if omniroute_base_url:
+        try:
+            from langchain_openai import ChatOpenAI
+            available_llms.append(
+                ChatOpenAI(
+                    model=os.getenv("OMNIROUTE_MODEL", "auto"),
+                    api_key=omniroute_api_key,
+                    base_url=omniroute_base_url,
+                    temperature=0.6,
+                )
+            )
+        except Exception as e:
+            print(f"OmniRoute init failed: {e}")
 
     # 1. OpenRouter API
     if openrouter_api_key and openrouter_api_key != "your_openrouter_api_key_here":
