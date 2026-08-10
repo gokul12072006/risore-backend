@@ -9,11 +9,3 @@ services:
         value: 3.10.12
       - key: GROQ_API_KEY
         sync: false
-
-  - type: web
-    name: omniroute-cloud
-    env: docker
-    rootDir: omniroute-deploy
-    envVars:
-      - key: OMNIROUTE_WS_BRIDGE_SECRET
-        generateValue: true

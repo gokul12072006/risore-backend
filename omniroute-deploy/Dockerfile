@@ -1,1 +1,0 @@
-FROM diegosouzapw/omniroute:latest
