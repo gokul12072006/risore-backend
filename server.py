@@ -252,7 +252,6 @@ async def chat_endpoint(
             chart_json_str = re.sub(r"^```(?:json)?\n?", "", chart_json_str)
             chart_json_str = re.sub(r"\n?```$", "", chart_json_str)
             
-            import urllib.parse
             encoded_chart = urllib.parse.quote(chart_json_str)
             chart_url = f"https://quickchart.io/chart?c={encoded_chart}&bkg=white"
             chart_md = f"\n\n![AI Generated Chart]({chart_url})\n"
@@ -518,7 +517,6 @@ Please answer in {language}."""
                 chart_json_str = re.sub(r"^```(?:json)?\n?", "", chart_json_str)
                 chart_json_str = re.sub(r"\n?```$", "", chart_json_str)
                 
-                import urllib.parse
                 encoded_chart = urllib.parse.quote(chart_json_str)
                 chart_url = f"https://quickchart.io/chart?c={encoded_chart}&bkg=white"
                 chart_md = f"\n\n![AI Generated Chart]({chart_url})\n"
