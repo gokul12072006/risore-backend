@@ -62,6 +62,7 @@ def get_llm():
     openrouter_api_key = os.getenv("OPENROUTER_API_KEY")
     gemini_api_key = os.getenv("GEMINI_API_KEY")
     deepseek_api_key = os.getenv("DEEPSEEK_API_KEY")
+    nvidia_api_key = os.getenv("NVIDIA_API_KEY")
     groq_api_key = os.getenv("GROQ_API_KEY")
     omniroute_base_url = os.getenv("OMNIROUTE_BASE_URL")
     omniroute_api_key = os.getenv("OMNIROUTE_API_KEY", "omniroute")
@@ -128,6 +129,21 @@ def get_llm():
             )
         except Exception as e:
             print(f"DeepSeek init failed: {e}")
+
+    # 3.5 Nvidia NIM API (Free Tier for Llama 3 / Nemotron)
+    if nvidia_api_key and nvidia_api_key != "your_nvidia_api_key_here":
+        try:
+            from langchain_openai import ChatOpenAI
+            available_llms.append(
+                ChatOpenAI(
+                    model=os.getenv("NVIDIA_MODEL", "nvidia/llama-3.1-nemotron-70b-instruct"),
+                    api_key=nvidia_api_key,
+                    base_url="https://integrate.api.nvidia.com/v1",
+                    temperature=0.6,
+                )
+            )
+        except Exception as e:
+            print(f"Nvidia init failed: {e}")
 
     # 4. Cloud: Groq API
     if groq_api_key and groq_api_key != "your_free_groq_api_key_here":
