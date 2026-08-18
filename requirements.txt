@@ -28,3 +28,4 @@ markdown-pdf
 duckduckgo-search
 langchain-openai
 langchain-google-genai
+nest_asyncio

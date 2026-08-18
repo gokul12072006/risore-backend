@@ -1,4 +1,6 @@
 import os
+import nest_asyncio
+nest_asyncio.apply()
 from typing import Any, List, Optional
 
 import g4f
