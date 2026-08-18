@@ -18,11 +18,10 @@ class UltimateFreeCloudLLM(LLM):
         # It automatically routes your prompt to the next available server if one is overloaded.
         provider_cluster = g4f.Provider.RetryProvider(
             [
+                g4f.Provider.DDG,
+                g4f.Provider.Blackbox,
+                g4f.Provider.Free2fa,
                 g4f.Provider.HuggingChat,
-                g4f.Provider.HuggingSpace,
-                g4f.Provider.BlackboxPro,
-                g4f.Provider.DeepInfra,
-                g4f.Provider.PollinationsAI,
             ]
         )
 
