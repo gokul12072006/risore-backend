@@ -1,7 +1,6 @@
 import os
-import nest_asyncio
-nest_asyncio.apply()
 from typing import Any, List, Optional
+import concurrent.futures
 
 import g4f
 from dotenv import load_dotenv
@@ -27,13 +26,18 @@ class UltimateFreeCloudLLM(LLM):
             ]
         )
 
-        try:
-            response = g4f.ChatCompletion.create(
+        def run_g4f():
+            return g4f.ChatCompletion.create(
                 model=g4f.models.default,
                 provider=provider_cluster,
                 messages=[{"role": "user", "content": prompt}],
                 timeout=45,  # generous timeout for the cloud cluster to try all routes
             )
+
+        try:
+            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+                future = executor.submit(run_g4f)
+                response = future.result()
             if response:
                 return response
         except Exception as e:
