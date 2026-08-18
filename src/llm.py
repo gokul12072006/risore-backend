@@ -96,7 +96,17 @@ def get_llm():
             # Using a strictly free model on OpenRouter to permanently avoid credit errors
             available_llms.append(
                 ChatOpenAI(
-                    model="google/gemini-2.0-flash-exp:free",
+                    model="google/gemini-2.0-pro-exp-02-05:free",
+                    api_key=openrouter_api_key,
+                    base_url="https://openrouter.ai/api/v1",
+                    temperature=0.6,
+                    max_tokens=2048,
+                )
+            )
+            # Add secondary free OpenRouter fallback in case the first one 404s
+            available_llms.append(
+                ChatOpenAI(
+                    model="meta-llama/llama-3.3-70b-instruct:free",
                     api_key=openrouter_api_key,
                     base_url="https://openrouter.ai/api/v1",
                     temperature=0.6,
