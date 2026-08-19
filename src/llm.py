@@ -92,17 +92,7 @@ def get_llm():
     if openrouter_api_key and openrouter_api_key != "your_openrouter_api_key_here":
         try:
             from langchain_openai import ChatOpenAI
-            # Using a strictly free model on OpenRouter to permanently avoid credit errors
-            available_llms.append(
-                ChatOpenAI(
-                    model="google/gemini-2.0-pro-exp-02-05:free",
-                    api_key=openrouter_api_key,
-                    base_url="https://openrouter.ai/api/v1",
-                    temperature=0.6,
-                    max_tokens=2048,
-                )
-            )
-            # Add secondary free OpenRouter fallback in case the first one 404s
+            # Using a strictly free, permanent model on OpenRouter to avoid 400/404 errors
             available_llms.append(
                 ChatOpenAI(
                     model="meta-llama/llama-3.3-70b-instruct:free",
@@ -190,6 +180,10 @@ def get_llm():
     primary_llm = available_llms[0]
     if len(available_llms) > 1:
         # If the primary fails at runtime, silently try the fallbacks in order
-        return primary_llm.with_fallbacks(available_llms[1:])
+        # We explicitly catch ALL Exceptions (including 400 and 404) so it NEVER crashes
+        return primary_llm.with_fallbacks(
+            available_llms[1:], 
+            exceptions_to_handle=(Exception,)
+        )
     
     return primary_llm
