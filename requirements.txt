@@ -28,4 +28,3 @@ markdown-pdf
 duckduckgo-search
 langchain-openai
 langchain-google-genai
-curl_cffi

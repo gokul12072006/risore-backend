@@ -21,7 +21,6 @@ class UltimateFreeCloudLLM(LLM):
                 g4f.Provider.DDG,
                 g4f.Provider.Blackbox,
                 g4f.Provider.Free2fa,
-                g4f.Provider.HuggingChat,
             ]
         )
 
