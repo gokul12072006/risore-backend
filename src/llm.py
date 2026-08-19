@@ -7,8 +7,37 @@ from dotenv import load_dotenv
 from langchain_core.language_models.chat_models import SimpleChatModel
 from langchain_core.messages import BaseMessage
 
+from langchain_core.language_models.chat_models import SimpleChatModel
+from langchain_core.messages import BaseMessage
+from pydantic import Field
+
 # Load environment variables from .env file
 load_dotenv()
+
+
+class HybridRouter(SimpleChatModel):
+    available_llms: List[Any] = Field(default_factory=list)
+
+    def _call(
+        self, messages: List[BaseMessage], stop: Optional[List[str]] = None, **kwargs: Any
+    ) -> str:
+        last_error = ""
+        for i, llm in enumerate(self.available_llms):
+            try:
+                response = llm.invoke(messages)
+                if hasattr(response, 'content'):
+                    return str(response.content)
+                return str(response)
+            except Exception as e:
+                last_error = str(e)
+                print(f"Fallback level {i} ({type(llm).__name__}) failed: {last_error}")
+                continue
+                
+        return f"All AI providers are currently unavailable or rate-limited. Last error: {last_error}"
+
+    @property
+    def _llm_type(self) -> str:
+        return "hybrid_router"
 
 
 class UltimateFreeCloudLLM(SimpleChatModel):
@@ -161,14 +190,5 @@ def get_llm():
     # 6. Cloud Fallback: Free Cluster
     available_llms.append(UltimateFreeCloudLLM())
 
-    # Build the fallback chain
-    primary_llm = available_llms[0]
-    if len(available_llms) > 1:
-        # If the primary fails at runtime, silently try the fallbacks in order
-        # We explicitly catch ALL Exceptions (including 400 and 404) so it NEVER crashes
-        return primary_llm.with_fallbacks(
-            available_llms[1:], 
-            exceptions_to_handle=(Exception,)
-        )
-    
-    return primary_llm
+    # Build the bulletproof hybrid router
+    return HybridRouter(available_llms=available_llms)
