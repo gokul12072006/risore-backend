@@ -4,16 +4,18 @@ import concurrent.futures
 
 import g4f
 from dotenv import load_dotenv
-from langchain_core.language_models.llms import LLM
+from langchain_core.language_models.chat_models import SimpleChatModel
+from langchain_core.messages import BaseMessage
 
 # Load environment variables from .env file
 load_dotenv()
 
 
-class UltimateFreeCloudLLM(LLM):
+class UltimateFreeCloudLLM(SimpleChatModel):
     def _call(
-        self, prompt: str, stop: Optional[List[str]] = None, **kwargs: Any
+        self, messages: List[BaseMessage], stop: Optional[List[str]] = None, **kwargs: Any
     ) -> str:
+        prompt = "\n".join([m.content for m in messages if hasattr(m, 'content') and isinstance(m.content, str)])
         # Create a massive load-balanced cluster of free providers.
         # It automatically routes your prompt to the next available server if one is overloaded.
         provider_cluster = g4f.Provider.RetryProvider(
@@ -88,22 +90,6 @@ def get_llm():
         except Exception as e:
             print(f"OmniRoute init failed: {e}")
 
-    # 1. OpenRouter API
-    if openrouter_api_key and openrouter_api_key != "your_openrouter_api_key_here":
-        try:
-            from langchain_openai import ChatOpenAI
-            # Using a strictly free, permanent model on OpenRouter to avoid 400/404 errors
-            available_llms.append(
-                ChatOpenAI(
-                    model="meta-llama/llama-3.3-70b-instruct:free",
-                    api_key=openrouter_api_key,
-                    base_url="https://openrouter.ai/api/v1",
-                    temperature=0.6,
-                    max_tokens=2048,
-                )
-            )
-        except Exception as e:
-            print(f"OpenRouter init failed: {e}")
 
     # 2. Google Gemini API
     if gemini_api_key and gemini_api_key != "your_gemini_api_key_here":
