@@ -26,8 +26,15 @@ class HybridRouter(SimpleChatModel):
             try:
                 response = llm.invoke(messages)
                 if hasattr(response, 'content'):
-                    return str(response.content)
-                return str(response)
+                    content = str(response.content)
+                else:
+                    content = str(response)
+                
+                # Remove <think> blocks that some reasoning models output
+                import re
+                content = re.sub(r'<think>.*?</think>\s*', '', content, flags=re.DOTALL)
+                
+                return content
             except Exception as e:
                 last_error = str(e)
                 print(f"Fallback level {i} ({type(llm).__name__}) failed: {last_error}")
