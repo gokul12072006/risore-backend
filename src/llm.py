@@ -139,10 +139,9 @@ def get_llm():
     if groq_api_key and groq_api_key != "your_free_groq_api_key_here":
         try:
             from langchain_groq import ChatGroq
-            # Reverting to Llama 3.3 for stability since Groq decommissioned the R1 endpoint temporarily
             available_llms.append(
                 ChatGroq(
-                    model="llama-3.3-70b-versatile", temperature=0.6, api_key=groq_api_key
+                    model="llama-3.1-8b-instant", temperature=0.6, api_key=groq_api_key
                 )
             )
         except Exception:
