@@ -74,42 +74,25 @@ def get_llm():
     If an API fails during generation (e.g., rate limit, credit issue),
     it silently falls back to the next available provider.
     
-    1. OpenRouter (Access to DeepSeek, Llama, Qwen, etc. for free/low cost)
-    2. Google Gemini (Generous free tier)
-    3. DeepSeek Direct API
-    4. Groq (Lightning-fast)
-    5. Ollama (100% private, local-first)
-    6. Free Cloud Cluster Fallback
+    1. Google Gemini (Generous free tier)
+    2. SambaNova Cloud (Llama 3.1 405B - Free)
+    3. GitHub Models (GPT-4o, Claude 3.5 - Free for GitHub users)
+    4. DeepSeek Direct API
+    5. Groq (Lightning-fast)
+    6. Free Cloud Cluster Fallback (g4f)
     """
     from src.config import LLM_MODEL
 
-    openrouter_api_key = os.getenv("OPENROUTER_API_KEY")
     gemini_api_key = os.getenv("GEMINI_API_KEY")
+    sambanova_api_key = os.getenv("SAMBANOVA_API_KEY")
+    github_token = os.getenv("GITHUB_TOKEN")
     deepseek_api_key = os.getenv("DEEPSEEK_API_KEY")
     nvidia_api_key = os.getenv("NVIDIA_API_KEY")
     groq_api_key = os.getenv("GROQ_API_KEY")
-    omniroute_base_url = os.getenv("OMNIROUTE_BASE_URL")
-    omniroute_api_key = os.getenv("OMNIROUTE_API_KEY", "omniroute")
 
     available_llms = []
 
-    # 0. OmniRoute API (290+ Providers, unified gateway)
-    if omniroute_base_url:
-        try:
-            from langchain_openai import ChatOpenAI
-            available_llms.append(
-                ChatOpenAI(
-                    model=os.getenv("OMNIROUTE_MODEL", "auto"),
-                    api_key=omniroute_api_key,
-                    base_url=omniroute_base_url,
-                    temperature=0.6,
-                )
-            )
-        except Exception as e:
-            print(f"OmniRoute init failed: {e}")
-
-
-    # 2. Google Gemini API
+    # 1. Google Gemini API
     if gemini_api_key and gemini_api_key != "your_gemini_api_key_here":
         try:
             from langchain_google_genai import ChatGoogleGenerativeAI
@@ -122,6 +105,36 @@ def get_llm():
             )
         except Exception as e:
             print(f"Gemini init failed: {e}")
+
+    # 2. SambaNova Cloud (Free Llama 3.1 405B)
+    if sambanova_api_key:
+        try:
+            from langchain_openai import ChatOpenAI
+            available_llms.append(
+                ChatOpenAI(
+                    model="Meta-Llama-3.1-405B-Instruct",
+                    api_key=sambanova_api_key,
+                    base_url="https://api.sambanova.ai/v1",
+                    temperature=0.6,
+                )
+            )
+        except Exception as e:
+            print(f"SambaNova init failed: {e}")
+
+    # 3. GitHub Models (Free GPT-4o / Llama 3 for GitHub users)
+    if github_token:
+        try:
+            from langchain_openai import ChatOpenAI
+            available_llms.append(
+                ChatOpenAI(
+                    model="gpt-4o",
+                    api_key=github_token,
+                    base_url="https://models.inference.ai.azure.com",
+                    temperature=0.6,
+                )
+            )
+        except Exception as e:
+            print(f"GitHub Models init failed: {e}")
 
     # 3. DeepSeek API
     if deepseek_api_key and deepseek_api_key != "your_deepseek_api_key_here":
