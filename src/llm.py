@@ -45,20 +45,9 @@ class UltimateFreeCloudLLM(SimpleChatModel):
         self, messages: List[BaseMessage], stop: Optional[List[str]] = None, **kwargs: Any
     ) -> str:
         prompt = "\n".join([m.content for m in messages if hasattr(m, 'content') and isinstance(m.content, str)])
-        # Create a massive load-balanced cluster of free providers.
-        # It automatically routes your prompt to the next available server if one is overloaded.
-        provider_cluster = g4f.Provider.RetryProvider(
-            [
-                g4f.Provider.DDG,
-                g4f.Provider.Blackbox,
-                g4f.Provider.Free2fa,
-            ]
-        )
-
         def run_g4f():
             return g4f.ChatCompletion.create(
                 model=g4f.models.default,
-                provider=provider_cluster,
                 messages=[{"role": "user", "content": prompt}],
                 timeout=45,  # generous timeout for the cloud cluster to try all routes
             )
@@ -170,7 +159,7 @@ def get_llm():
             from langchain_groq import ChatGroq
             available_llms.append(
                 ChatGroq(
-                    model="llama-3.1-8b-instant", temperature=0.6, api_key=groq_api_key
+                    model="qwen/qwen3.6-27b", temperature=0.6, api_key=groq_api_key
                 )
             )
         except Exception:
